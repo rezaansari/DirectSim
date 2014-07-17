@@ -318,8 +318,11 @@ int main(int narg, char* arg[]) {
 	// xplanes should be the difference between NX and drho.SizeX()
 	int NZ=m2g.ReturnNZ();
 	int diff = drho.SizeX()-NZ;
-	if( xplanes!=abs(diff) )
-		throw ParmError("ERROR: removed wrong number of planes from SimLSS cube");
+	if( xplanes!=abs(diff) ) {
+	  cout << " rdlss/Error: drho.SizeX()="<<drho.SizeX()<<" - NZ="<<NZ<<" != xplanes="<<xplanes<<endl;
+	  cout << " ... removed wrong number of planes from SimLSS cube" << endl;
+	  throw ParmError("ERROR: removed wrong number of planes from SimLSS cube");
+	}
 	m2g.SetRandPos(doRandPos);
 
 
@@ -351,7 +354,8 @@ int main(int narg, char* arg[]) {
 	cout << "     Set up Schechter functions for each galaxy type"<<endl;
 	cout << " ... GOODS B band: Early types, Late types, Starbursts"<<endl;
 	cout << " ... see Table 3 in Dahlen et al 2005"<<endl;
-	
+
+	/*  --- Modified by Reza  , see below 
 	string LFplace;
 	char * plf=getenv("SIMBAOLF");
 	if (plf==NULL) {
@@ -364,7 +368,7 @@ int main(int narg, char* arg[]) {
 		}
 	string LFfile = LFplace +	"GOODS_B_LF.txt";// add an option for this
 
-
+	/*  
 	ifstream ifs;
 	ifs.open(LFfile.c_str(), ifstream::in);
 	if (ifs.fail())
@@ -373,7 +377,8 @@ int main(int narg, char* arg[]) {
 	TArray<r_4> LFTable;
 	sa_size_t nr, nc;
 	LFTable.ReadASCII(ifs,nr,nc);
-	//cout << LFTable ;
+	cout << " rdlss: from LFTable, nr="<<nr<<" nc="<<nc<<endl;
+	cout << LFTable ;
 	
 	int MstarCol=2, AlphaCol=3, PhiStarCol=4;
 	// ALL GALAXIES
@@ -407,7 +412,23 @@ int main(int narg, char* arg[]) {
 	                                      phistarSz2=LFTable(PhiStarCol,8)*1e-4;
 	double MstarSz3=LFTable(MstarCol,12),alpSz3=LFTable(AlphaCol,12),
 	                                     phistarSz3=LFTable(PhiStarCol,12)*1e-4;
-	
+	*/
+
+	//---- reading and initializing the LF (Schechter) functions 
+	string LFfile = "GOODS_B_LF.txt";// add an option for this
+	cout << " rdlss: reading LF params from file:"<<LFfile<<endl;
+	LFParameters lfpars(LFfile, 1);
+	// type=0, All LF; type=1, Early LF; type=2, Late LF; type=3, SB LF
+	double MstarAz3, alpAz3, phistarAz3;
+	lfpars.ReturnParsBini(MstarAz3, alpAz3,phistarAz3,2,0);
+	double MstarEz3, alpEz3, phistarEz3;
+	lfpars.ReturnParsBini(MstarEz3, alpEz3,phistarEz3,2,1);
+	double MstarLz3, alpLz3, phistarLz3;
+	lfpars.ReturnParsBini(MstarLz3, alpLz3,phistarLz3,2,2);
+	double MstarSz3, alpSz3, phistarSz3;
+	lfpars.ReturnParsBini(MstarSz3, alpSz3,phistarSz3,2,3);
+	//----  fin modif Reza 
+
 	string MstarUnits="M-5log10h70";
 	string phistarUnits="(Mpc/h70)^-3";
 	
@@ -422,7 +443,6 @@ int main(int narg, char* arg[]) {
 	cout << "                "<< MstarSz3 <<"     "<< alpSz3 <<"        ";
 	cout << phistarSz3 <<"        Starburst"<<endl<<endl;
 
-	
 	// Find conversion from mass density to galaxy density
 	cout<<"     Mass to Galaxy number conversion"<<endl;
 	Schechter schAz3(phistarAz3,MstarAz3,alpAz3);
@@ -545,22 +565,22 @@ int main(int narg, char* arg[]) {
 	bool extinct=false;
 	
 	switch (out_type) {
-        case 0:
-		    m2g.CreateGalCatalog(idsim,outfile,gfdz3,extinct,doVeryFaintCut,maxRadius,isZRadial);
-		    break;
-	    case 1:
-	        m2g.CreateSimpleCatalog(idsim, outfile, maxRadius);
-	        break;
-	    case 2:
-		    m2g.CreateTrueZFile(idsim, outfile, maxRadius);
-		    break;
-	    case 3:
-            m2g.CreateNzHisto(outfile, gfdz3, extinct, maxRadius);
-            break;
+	case 0:
+	  m2g.CreateGalCatalog(idsim,outfile,gfdz3,extinct,doVeryFaintCut,maxRadius,isZRadial);
+	  break;
+	case 1:
+	  m2g.CreateSimpleCatalog(idsim, outfile, maxRadius);
+	  break;
+	case 2:
+	  m2g.CreateTrueZFile(idsim, outfile, maxRadius);
+	  break;
+	case 3:
+	  m2g.CreateNzHisto(outfile, gfdz3, extinct, maxRadius);
+	  break;
         default:
-            throw ParmError("ERROR! out_type not understood");
-            break;
-		}
+	  throw ParmError("ERROR! out_type not understood");
+	  break;
+	}
 		
   }  // End of try bloc 
   

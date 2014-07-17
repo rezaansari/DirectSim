@@ -94,7 +94,8 @@ vector<double> Hermite::calculateHermiteCoeffs(int order) const
 
     vector<double> coeffs(order+1);
     for (int i=0; i<=order/2; i++) {
-        coeffs[order-2*i] = factorial(order)/(factorial(i)*factorial(order-2*i))*pow(2.,(order-2*i))*pow(-1,i);
+      //        coeffs[order-2*i] = factorial(order)/(factorial(i)*factorial(order-2*i))*pow(2.,(order-2*i))*pow(-1,i);
+      coeffs[order-2*i] = factorial(order)/(factorial(i)*factorial(order-2*i))*pow(2.,(order-2*i))*((i%2==0)?1.:-1.);
         }
 /*
 endif else begin

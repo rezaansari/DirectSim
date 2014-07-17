@@ -36,24 +36,38 @@ void CumulDistZ::SetUp(LFParameters& lfpars, SimpleUniverse& su, double zmin,
 	
 	Timer tm("CumulDistZ::SetUp",false);
 	tm.Split();
-	
+	//----- Ajout Reza 
+	double valinteg=0.;
+	InterpCosmoCalc cosmoc(su_,0.,10.,1000);
+	// Fin ajout Reza ----
 	double dz=(zmax_-zmin_)/(nptinterp_-1);
 	for (int i=0; i<nptinterp_; i++) {
-		if (prt>0)
-			cout <<"     On "<<i+1<<" of "<<nptinterp_<<endl;                           
-		double z = zmin + i*dz;
-		schZ.SetInteg(0, z, nptinteg_);
-		double val=schZ.Integrate();
-		zv_.push_back(z);
-		scv_.push_back(val);
-		
-		if (i<10 && i>8) {
-		    tm.Split();
-		    tm.PartialElapsedTime();
-		    cout <<"     "<<i+1<<" redshifts took "<< tm.PartialElapsedTime() <<"s"<<endl;
-		    }
-		}
-
+	  if (prt>0)
+	    cout <<"     On "<<i+1<<" of "<<nptinterp_<<endl;                           
+	  double z = zmin + i*dz;
+	  /*  Reza --- 
+	  schZ.SetInteg(0, z, nptinteg_);
+	  double val=schZ.Integrate();
+	  */
+	  //  --- modif Reza 
+	  double ps,ms,a;
+	  lfpars_(z,ps,ms,a);
+	  Schechter sch(ps,ms,a);
+	  double val_integ_sch=sch.Integrate();
+	  valinteg += val_integ_sch*cosmoc.VolumeElementMpc3(z);
+	  double val = valinteg;
+	  // --- fin modifs Reza
+	  zv_.push_back(z);
+	  scv_.push_back(val);
+	  
+	  if (i<10 && i>8) {
+	    //RZ  if (1) {
+	    tm.Split();
+	    tm.PartialElapsedTime();
+	    cout <<"     "<<i+1<<" redshifts took "<< tm.PartialElapsedTime() <<"s"<<endl;
+	  }
+	}
+	
 	// divide by value at zmax
 	for (int i=0; i<nptinterp_; i++)
 		scv_[i] /= scv_[nptinterp_-1];
@@ -312,6 +326,52 @@ void DrawM::SetUp(string infile)
 		cumval_(i,j)=
 		}
 };*/
+
+/*-- Moved to here from .h file by Reza */
+void DrawM::SetArray()
+{
+  if (mmin_>0)
+    throw ParmError("Min magnitude NOT set");
+  if (zmin_<0)
+    throw ParmError("Min redshift NOT set");
+  
+  Timer tm("DrawM::SetArray",false);
+  tm.Split();
+  cout <<"     DrawM::SetArray "<<endl;
+  // loop over magnitudes and redshifts
+  for (int i=0; i<mv_.Size(); i++) {
+    for (int j=0; j<zv_.Size(); j++) { 
+      
+      double m = mmin_+i*dm_;
+      double z = zmin_+j*dz_;			
+      double cv = cumm_(m,z); // this is a calculation NOT an interpolation!
+      int nantest = my_isnan(cv);
+      if (nantest>0) { 
+	cout << "DrawM::SetArray()     Found nan: z = "<< z <<", m = "<< m;
+	cout << ", cv = "<< cv <<" setting cv->0" <<endl;
+	cv=0;
+      }
+      
+      // filling the arrays
+      mv_(i) = m;
+      zv_(j) = z;
+      cumval_(i,j) = cv;  // dim1=m, dim2=z
+      
+      if ( (i<1) && ( (j<10 && j>8) || (j<20 && j>18) ) ) {
+	tm.Split();
+	cout <<"DrawM::SetArray()     10 loops took "<< tm.PartialElapsedTimems() <<"ms"<<endl;
+      }
+      
+    }
+    if (i%(mv_.Size()/50)==0) {
+      cout<<"DrawM::SetArray(): done i="<<i<<" /mv_.Size()="<<mv_.Size()<<endl;
+      cout<<tm;
+    } 
+  }
+  //cout << "Checking cumval m dist ... "<<endl;
+  //for (int i=0; i<npt; i++)
+  //	cout << mv_(0) <<"  "<<cumval_(0)<<endl;
+}
 
 // To draw magnitude given redshift z
 double DrawM::Draw(double z)

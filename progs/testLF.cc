@@ -54,7 +54,7 @@ void usage(void)
                                 
  	cout << "  AA April 2010"<<endl<<endl;
 
-	cout << " -o : outfileroot: root filename of outputs (default testlf)";
+	cout << " -o : outfileroot: root filename of outputs (default = testfiles/testlf)";
 	cout << endl;
 	cout << endl;
 }
@@ -71,7 +71,7 @@ int main(int narg, char* arg[])
   cout<<endl<<endl;
 
   //--- decoding command line arguments 
-  string outfileroot="testlf";
+  string outfileroot="testfiles/testlf";
   cout << " decoding command line arguments ..."<<endl;
   char c;
   	while((c = getopt(narg,arg,"ho:")) != -1) 
@@ -216,7 +216,7 @@ int main(int narg, char* arg[])
 		// 5) draw galaxies and write them to a file
 		stringstream ss;
 		ss << ib+1;
-		string outfile="testfiles/"+outfileroot+"_bin"+ss.str()+".txt";
+		string outfile=outfileroot+"_bin"+ss.str()+".txt";
 		ifstream inp;
     		ofstream outp;
 		inp.open(outfile.c_str(), ifstream::in);

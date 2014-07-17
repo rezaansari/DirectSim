@@ -224,7 +224,7 @@ int main(int narg, char *arg[]) {
 		if (zref>0 && ADD2Z) {
 			cout << "     Calculating co-moving distance error at z = "<<zref;
 			su.SetEmissionRedShift(zref);
-			ErrFix = su.ZErr2CoDistErr(PZerr);
+			ErrFix = ZErr2CoDistErr(su,PZerr);  // change by Reza, 08/07/2014 
 			// PZerr*(1+zref)*(SpeedOfLight_Cst/su.HZE());
 			cout <<", dDc = "<< ErrFix <<endl<<endl;
 			}
@@ -336,7 +336,8 @@ int main(int narg, char *arg[]) {
 				if (zref<0) {
 					// add varying error to z coord
 					su.SetEmissionRedShift(reds);
-					PZDerr = su.ZErr2CoDistErr(PZerr);
+					//Reza-DEL					PZDerr = su.ZErr2CoDistErr(PZerr);
+					PZDerr = ZErr2CoDistErr(su,PZerr);  // change by Reza, 08/07/2014 
 					z = z + PZDerr*rg.Gaussian();
 					}
 				else // add constant error to z coord

@@ -24,6 +24,7 @@ Mass2Gal::Mass2Gal(TArray<r_8> drho,  SimpleUniverse& su, RandomGeneratorInterfa
 
 	cout <<"    Mass2Gal constructor: reads in density cube"<<endl;
 	mass_ = drho(Range(0, drho.SizeX()-nbadplanes-1), Range::all(), Range::all()).PackElements();
+
 	cout << "    Mass2Gal::Mass2Gal(TArray<r_4> drho,  int nbadplanes=" << nbadplanes << ")" << endl;
   	mass_.Show();
 	
@@ -363,15 +364,16 @@ sa_size_t Mass2Gal::CreateGalCatalog(int idsim, string fitsname, GalFlxTypDist& 
 	//gals.AddFloatColumn("Ext");
 	//gals.AddFloatColumn("cz"); // cell redshift
 	DataTableRow row = gals.EmptyRow();
-	
+
 	// For true z only catalog WITHOUT ABSOLUTE MAG CUT
-	string fitsname2 = "ZONLY_"+fitsname;
+	size_t ppos = fitsname.find_last_of('.');
+	string fitsname2 = fitsname.substr(0,ppos)+"_ZONLY.fits";
 	FitsInOutFile swf2(fitsname2, FitsInOutFile::Fits_Create);	
 	SwFitsDataTable gals2(swf2, 2048);
 	gals2.AddLongColumn("GalID");
 	gals2.AddFloatColumn("zs");
 	DataTableRow row2 = gals2.EmptyRow();
-	
+
 	// Interpolate maximum observable absolute magnitude verses redshift
 	// If not cutting on absolute magnitude the interpolation function
 	// has no meaning
@@ -392,9 +394,12 @@ sa_size_t Mass2Gal::CreateGalCatalog(int idsim, string fitsname, GalFlxTypDist& 
 	cout <<  " Mass2Gal::CreateGalCatalog  start looping over cube cells NCells= " << ngals_.Size() << " NGals=" << ng_ << " ... "<<endl;
 	uint_8 ngsum=0;  // counter for checking  
 	uint_8 nginfile=0,nginzfile=0;  // count of galaxies going into file, total gals simulated
-	
+
+	size_t totcellcnt=ngals_.SizeX()*ngals_.SizeY()*ngals_.SizeZ();
+	size_t cellcnt=0;
+	size_t lastpercent=0, last10percent=10;
 	for(sa_size_t iz=0; iz<ngals_.SizeZ(); iz++)// Z direction (~redshift direction)
-        for(sa_size_t iy=0; iy<ngals_.SizeY(); iy++)// Y direction (transverse plane)
+	  for(sa_size_t iy=0; iy<ngals_.SizeY(); iy++) { // Y direction (transverse plane)
             for(sa_size_t ix=0; ix<ngals_.SizeX(); ix++) {// X direction (transverse plane) 
 		  
 		        // pick a cell
@@ -481,9 +486,25 @@ sa_size_t Mass2Gal::CreateGalCatalog(int idsim, string fitsname, GalFlxTypDist& 
 				nginzfile++; // adding number of gals in file
 			    }
 				
-            }  // end of loop over galaxies in the cell 
-        } // end of loop over ix (cells) 
-	cout <<" Mass2Gal::CreateGalaxyCatalog() finished loop"<<endl;
+		}  // end of loop over galaxies in the cell 
+
+	    } // end of loop over ix (cells) 
+	    // ---- progress print 
+	    cellcnt+=ngals_.SizeX();
+	    size_t perccnt=100*cellcnt/totcellcnt;
+	    if (perccnt > lastpercent) {
+	      for(size_t ipp=lastpercent; ipp<perccnt; ipp++) cout << '.';
+	      if (perccnt >= last10percent) { 
+		cout<<perccnt<<'%'; 
+		if (last10percent%40==0) cout<<endl; 
+		last10percent+=10; 
+	      }
+	      lastpercent=perccnt;
+	      cout.flush();
+	    }
+	  }  // end of loop over iy (cells) 
+	
+	cout <<" \n Mass2Gal::CreateGalaxyCatalog() finished loop"<<endl;
 
 	// want to delete swf2 file if no magnitude cut, not sure how to do this
 	

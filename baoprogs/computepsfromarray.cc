@@ -302,7 +302,8 @@ int main(int narg, char* arg[]) {
 	if (photoZerror>0) {
 		cout << "     Calculate comoving photo-z error:"<<endl;
 		su.SetEmissionRedShift(z_center);
-		photoZerrorMpc = su.ZErr2CoDistErr(photoZerror);
+		//Reza-DEL	photoZerrorMpc = su.ZErr2CoDistErr(photoZerror);
+		photoZerrorMpc = ZErr2CoDistErr(su,photoZerror);  // Changed by Reza, 08/07/2014 
 		cout <<"    Redshift of array center = "<< z_center <<", photo-z error = ";
 		cout << photoZerror <<", photo-z co-distance error = "<< photoZerrorMpc;
 		cout <<" Mpc"<<endl;

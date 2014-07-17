@@ -24,6 +24,7 @@
 #include "schechter.h"
 #include "cosmocalcs.h"
 #include "gftdist.h"
+#include "sedpca.h"
 #include "simdata.h"
 #include "matrix.h"
 

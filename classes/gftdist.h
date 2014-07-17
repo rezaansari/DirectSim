@@ -190,7 +190,7 @@ class CumulDistM {
 public:
 
 	/** Default constructor */
-	CumulDistM(): lfpars_(lfpars_default_) , su_(su_default_) , Mmin_(0) , Mmax_(0)
+  CumulDistM(): lfpars_(lfpars_default_) , cosmoc_(su_default_,0.,10.,1000) , Mmin_(0) , Mmax_(0)
 	{    };
 
 	/** Constructor 
@@ -199,7 +199,7 @@ public:
 	@param Mmin     sets lower integration bound
 	@param Mmax     sets upper integration bound                              */
 	CumulDistM(LFParameters& lfpars, SimpleUniverse& su, double Mmin=-24, double Mmax=-13)
-		: lfpars_(lfpars) , su_(su) , Mmin_(Mmin) , Mmax_(Mmax){    };
+		: lfpars_(lfpars) , cosmoc_(su,0.,10.,1000) , Mmin_(Mmin) , Mmax_(Mmax){    };
 		
 	// copy constructor
 	//CumulDistM(CumulDistM const& a);
@@ -209,13 +209,35 @@ public:
 	    \f$ F_M(M,z)=\frac{\int_M_1^M_2 \phi(M',z)dV(z)dM'}
 	                {\int_M_1^M_2  \phi(M',z)dV(z)dM'}                        */
 	virtual double operator()(double m, double z) {
+	  /*   Change par Reza 
 		SchechterVol schvol(lfpars_,su_);
 		schvol.SetInteg(Mmin_,m);
 		double top=schvol.Integrate(z);
 		schvol.SetInteg(Mmin_,Mmax_);
 		double bot=schvol.Integrate(z);
-		return top/bot; 
-		}
+       	        return top/bot; 
+	  */
+	  //---- introduit par Reza 
+	  double ps,ms,a;
+	  lfpars_(z,ps,ms,a);
+	  Schechter sch(ps,ms,a);
+	  double top=0.;
+	  int npt=10000*((m-Mmin_)/(Mmax_-Mmin_));
+	  if (npt>1) {
+	    sch.SetInteg(Mmin_,m,npt);
+	    top=sch.Integrate();
+	  }
+	  double bot=top;
+	  npt=10000*((Mmax_-m)/(Mmax_-Mmin_));
+	  if (npt>1) {
+	    sch.SetInteg(m,Mmax_,npt);
+	    bot+=sch.Integrate();
+	  }
+	  double retv=0.; 
+	  if (bot>1.e-39)  retv=top/bot;
+	  return retv;
+	  //---- introduit par Reza 
+	}
 		
 	/** Return magnitude integration limits                                   */
     void returnMminMmax(double& Mmin, double& Mmax)
@@ -223,7 +245,8 @@ public:
 
 protected:
 	LFParameters& lfpars_;      /**< class that stores the LF parameters and evolution */
-	SimpleUniverse& su_;        /**< class that calculates cosmological quantities     */
+  // Reza: We use InterpCosmoCalc instead	SimpleUniverse& su_;        /**< class that calculates cosmological quantities     */
+        InterpCosmoCalc cosmoc_;        /**< cosmology                                  */
 	double Mmin_;               /**< min absolute magnitude of cdf            */
 	double Mmax_;               /**< max absolute magnitude of cdf            */
 	LFParameters lfpars_default_;
@@ -346,46 +369,7 @@ public:
 	void Output2File(string outfileroot);
 
     /** Store cumulative magnitude distribution values in an array           */
-	void SetArray() {
-		if (mmin_>0)
-			throw ParmError("Min magnitude NOT set");
-		if (zmin_<0)
-			throw ParmError("Min redshift NOT set");
-			
-		Timer tm("DrawM::SetArray",false);
-	    tm.Split();
-		cout <<"     DrawM::SetArray "<<endl;
-		// loop over magnitudes and redshifts
-		for (int i=0; i<mv_.Size(); i++)
-			for (int j=0; j<zv_.Size(); j++) { 
-
-				double m = mmin_+i*dm_;
-				double z = zmin_+j*dz_;			
-				double cv = cumm_(m,z); // this is a calculation NOT an interpolation!
-				int nantest = my_isnan(cv);
-				if (nantest>0) { 
-					cout << "     Found nan: z = "<< z <<", m = "<< m;
-					cout << ", cv = "<< cv <<" setting cv->0" <<endl;
-					cv=0;
-					}
-				
-				// filling the arrays
-				mv_(i) = m;
-				zv_(j) = z;
-				cumval_(i,j) = cv;  // dim1=m, dim2=z
-				
-				if ( (i<1) && ( (j<10 && j>8) || (j<20 && j>18) ) ) {
-		            tm.Split();
-		            cout <<"     10 loops took "<< tm.PartialElapsedTimems() <<"ms"<<endl;
-		            }
-
-				}
-
-		//cout << "Checking cumval m dist ... "<<endl;
-		//for (int i=0; i<npt; i++)
-		//	cout << mv_(0) <<"  "<<cumval_(0)<<endl;
-		};
-
+  void SetArray();   
     /** Given a redshift z draw a magnitude according the the cumulative distribution
         in the array @cumval_
         THIS SHOULD BE REPLACED WITH A 2D INTERP TABLE                        */

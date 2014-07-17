@@ -259,7 +259,7 @@ public:
         phistar = phistar_; Mstar = Mstar_; alpha = alpha_; };
       
     /** Set the integration parameters (if want different from default)       */
-    void SetInteg(double Mmin,double Mmax, int npt)
+    void SetInteg(double Mmin,double Mmax, int npt=10000)
         { Mmin_=Mmin; Mmax_=Mmax; npt_=npt; };
 
     /** Return the LF value for absolute magnitude "absmag"                   */
@@ -325,7 +325,7 @@ public:
 	    @param lfpars    luminosity function parameters
 	    @param su        cosmology                                            */
 	SchechterVol(LFParameters& lfpars, SimpleUniverse& su)
-		: lfpars_(lfpars) , su_(su) {   
+	  : lfpars_(lfpars) , cosmoc_(su,0.,10.,1000) {   
 			Mmin_=-24, Mmax_=-13;// units of "M-5log10h70"
   			npt_=10000;  };
 
@@ -341,9 +341,12 @@ public:
 			double ps,ms,a;
 			lfpars_(z,ps,ms,a);
 			Schechter sch(ps,ms,a);
+			/*
 			su_.SetEmissionRedShift(z);
 			double volel=su_.VolEl();
 			return sch(absmag)*volel;
+			*/
+			return sch(absmag)*cosmoc_.VolumeElementMpc3(z);
 		}
 
 	/** Integrate \f$ \int \phi(M|z) dV(z) dM \f$
@@ -359,7 +362,8 @@ public:
 
 protected:
 	LFParameters& lfpars_;    /**< luminosity function parameters             */
-	SimpleUniverse& su_;      /**< cosmology                                  */
+  // Reza: We use InterpCosmoCalc instead	SimpleUniverse& su_;      /**< cosmology                                  */
+        InterpCosmoCalc cosmoc_;        /**< cosmology                                  */
 	double Mmin_;             /**< integration lower limit                    */
 	double Mmax_;             /**< integration upper limit                    */
 	int npt_;                 /**< number of points to use in integration     */
@@ -424,7 +428,7 @@ public:
 	    @param lfpars    luminosity function parameters
 	    @param su        cosmology                                            */
 	SchechterZVol(LFParameters& lfpars, SimpleUniverse& su)
-		: lfpars_(lfpars) , su_(su) {   
+	  : lfpars_(lfpars) , cosmoc_(su,0.,10.,1000) {   
 			zmin_=0, zmax_=6;
   			npt_=10000; };
 
@@ -432,8 +436,11 @@ public:
         @param z    redshift                                                  */
 	virtual double operator() (double z) const { 
             SchechterM schM(lfpars_);
+	    /*
             su_.SetEmissionRedShift(z);
             double volel=su_.VolEl();
+	    */
+	    double volel=cosmoc_.VolumeElementMpc3(z);
             double val=schM.Integrate(z); //tm.Split();
             //cout << "Time to integrate = "<<tm.PartialElapsedTimems()<<endl;
             return val*volel; };
@@ -450,7 +457,8 @@ public:
 
 protected:
 	LFParameters& lfpars_;    /**< luminosity function parameters             */
-	SimpleUniverse& su_;      /**< cosmology                                  */
+  // Reza: We use InterpCosmoCalc instead	SimpleUniverse& su_;      /**< cosmology                                  */
+        InterpCosmoCalc cosmoc_;        /**< cosmology                                  */
 	double zmin_;             /**< integration lower limit                    */
 	double zmax_;             /**< integration upper limit                    */
 	int npt_;                 /**< number of points to use in integration     */

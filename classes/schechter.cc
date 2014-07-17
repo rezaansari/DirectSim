@@ -583,12 +583,18 @@ double Schechter::Volume(SimpleUniverse su, double skyarea, double z1, double z2
 
     // fraction of whole sky
     double skyfrac=skyarea/(4*PI);
-
+    /*   Modif Reza Juil 2014 
     double dvdOmega;
     int npt = 1000;
     su.NumIntegVolElz(z1, z2, npt, dvdOmega);
     double DH = su.HubbleLengthMpc();
     double vol = skyfrac*4*PI*dvdOmega*DH;
+    */
+    su.SetEmissionRedShift(z1);
+    double vol1=su.VolumeMpc3();
+    su.SetEmissionRedShift(z2);
+    double vol2=su.VolumeMpc3();
+    double vol = skyfrac*(vol2-vol1);
     //cout <<"     Volume between z1(="<<z1<<") and z2(="<<z2<<") is "<<vol<<endl;
     return vol;
 };

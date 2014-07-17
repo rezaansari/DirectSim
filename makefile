@@ -31,7 +31,7 @@ KCORR = ${GALSIM}/kCorrections
 
 LIBH := $(MYCL)/cosmocalcs.h $(MYCL)/geneutils.h $(MYCL)/gftdist.h \
 $(MYCL)/schechter.h $(MYCL)/sinterp.h $(MYCL)/simdata.h $(MYCL)/reddening.h \
-$(MYCL)/sedfilter.h $(MYCL)/genefluct3d.h  $(MYCL)/pkspectrum.h \
+$(MYCL)/sedfilter.h $(MYCL)/sedpca.h $(MYCL)/genefluct3d.h  $(MYCL)/pkspectrum.h \
 $(MYCL)/mass2gal.h $(MYCL)/powerspec.h $(MYCL)/matrix.h $(MYCL)/igm.h \
 $(MYCL)/hpoly.h $(MYCL)/shapelets.h $(MYCL)/em.h $(MYCL)/cat2grid.h \
 $(MYCL)/fitkbaoscale.h $(MYCL)/chisqstats.h
@@ -40,7 +40,7 @@ $(MYCL)/fitkbaoscale.h $(MYCL)/chisqstats.h
 
 LIBO := $(OBJ)/cosmocalcs.o $(OBJ)/geneutils.o $(OBJ)/gftdist.o \
 $(OBJ)/schechter.o $(OBJ)/sinterp.o $(OBJ)/simdata.o $(OBJ)/reddening.o \
-$(OBJ)/sedfilter.o $(OBJ)/genefluct3d.o  $(OBJ)/pkspectrum.o $(OBJ)/mass2gal.o \
+$(OBJ)/sedfilter.o $(OBJ)/sedpca.o $(OBJ)/genefluct3d.o  $(OBJ)/pkspectrum.o $(OBJ)/mass2gal.o \
 $(OBJ)/powerspec.o $(OBJ)/matrix.o $(OBJ)/igm.o $(OBJ)/hpoly.o $(OBJ)/shapelets.o\
 $(OBJ)/em.o $(OBJ)/cat2grid.o $(OBJ)/fitkbaoscale.o $(OBJ)/chisqstats.o
 #$(OBJ)/root_plots.o
