@@ -1,5 +1,6 @@
 #include "cat2grid.h"
 #include "ctimer.h"
+#include "progbar.h"
 
 
 //Improved constructor: 
@@ -252,6 +253,7 @@ double Cat2Grid::FindMinMaxCoords()
 	GalRecord grec;
 	double x=1e8,y=1e8,z=-1e8,redshift=-10;
 	
+	ProgressBar pgb(ngall_, ProgBarM_Percent);
 	for(long ig=0; ig<ngall_; ig++) {
 		
 	  	dt_.GetRow(ig, rowin);
@@ -294,6 +296,7 @@ double Cat2Grid::FindMinMaxCoords()
 		if (redshift>maxzs)
 			maxzs = redshift;
 
+		pgb.update(ig);
 		}
 		
 	cout <<"    Number of observed galaxies = "<< ng;
@@ -757,6 +760,7 @@ void Cat2Grid::GalGrid(double SkyArea)
 	GalRecord grec;
 	double x=1e8,y=1e8,z=-1e8,redshift=-10;
 	double selphi=1.;
+	ProgressBar pgb(ngall_, ProgBarM_Time);  // ProgBarM_None, ProgBarM_Percent, ProgBarM_Time
 	for(long ig=0; ig<ngall_; ig++) {
 		
 		// get row values from data table
@@ -795,7 +799,8 @@ void Cat2Grid::GalGrid(double SkyArea)
         // add galaxy to correct grid pixel 
 		// ng_ and ngout_ are summed up in here:
 	  	AddToCell(x,y,z,selphi); 
-	  
+		
+		pgb.update(ig); 
       	}
 
 	cout <<"    Number of galaxies actually observed = "<< ngo_;
@@ -984,43 +989,46 @@ void Cat2Grid::RandomGrid(double nc, bool SaveArr)
 		zc_.SetSize(ndim, mydim); // redshifts of pixel centers
 		}
 	cout <<"    Compute weights and random catalog ..."<<endl;
-	
-	
+
+	ProgressBar pgb(Nx_*Ny_, ProgBarM_Time);  // ProgBarM_None, ProgBarM_Percent, ProgBarM_Time
+	size_t ccnt=0;
 	for(int i=0; i<Nx_; i++) {
 	
 		//tm.Split();
 		//cout<<"outer loop = "<<i<<", time elapsed = "<<tm.TotalElapsedTime()<<endl;
-		for(int j=0; j<Ny_; j++)
-			for(int k=0; k<Nz_; k++)	{
-			
-				double xc,yc,zc;
-				GetCellCoord(i,j,k,xc,yc,zc);
-				double dcell= sqrt(xc*xc+yc*yc+zc*zc);
-				double phic = acos(zc/dcell);
-				double redshift = dist2z_(dcell);
-				double phi = (*selfuncp_)(redshift);
-				
-				if (phic<=SkyArea_)	{
-					
-					weights_(i,j,k) = 1/phi; // NOTE weight does not have to be 1/SF
-					// Average number of gals expected in cell
-					double mu = phi*nc; // just Poisson phi
-					uint_8 npoiss = rg_.PoissonAhrens(mu); // Poisson fluctuate
-					randomcat_(i,j,k) = (double)npoiss;
-				
-					wrgals_(i,j,k)=weights_(i,j,k)*randomcat_(i,j,k); // deleted alpha
-					}
-				else {
-					randomcat_(i,j,k) = 0;
-					weights_(i,j,k) = 0;
-					wrgals_(i,j,k) = 0;
-					}
-
-				if (SaveArr)
-					zc_(i,j,k) = redshift;
-				
-				}
-		}
+	  for(int j=0; j<Ny_; j++) {
+	    for(int k=0; k<Nz_; k++)	{
+	      
+	      double xc,yc,zc;
+	      GetCellCoord(i,j,k,xc,yc,zc);
+	      double dcell= sqrt(xc*xc+yc*yc+zc*zc);
+	      double phic = acos(zc/dcell);
+	      double redshift = dist2z_(dcell);
+	      double phi = (*selfuncp_)(redshift);
+	      
+	      if (phic<=SkyArea_)	{
+		
+		weights_(i,j,k) = 1/phi; // NOTE weight does not have to be 1/SF
+		// Average number of gals expected in cell
+		double mu = phi*nc; // just Poisson phi
+		uint_8 npoiss = rg_.PoissonAhrens(mu); // Poisson fluctuate
+		randomcat_(i,j,k) = (double)npoiss;
+		
+		wrgals_(i,j,k)=weights_(i,j,k)*randomcat_(i,j,k); // deleted alpha
+	      }
+	      else {
+		randomcat_(i,j,k) = 0;
+		weights_(i,j,k) = 0;
+		wrgals_(i,j,k) = 0;
+	      }
+	      
+	      if (SaveArr)
+		zc_(i,j,k) = redshift;
+	      
+	    }   // end of loop over k (z-direction)
+	    ccnt++;  pgb.update(ccnt); 
+	  } // end of loop over j (y-direction)
+	} // end of loop over  (x-direction)
 	nrand_=randomcat_.Sum(); 
 	wnrand_=wrgals_.Sum();
 	cout <<"    number of gals in in grid = "<< ng_;

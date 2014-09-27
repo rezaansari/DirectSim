@@ -1,5 +1,6 @@
 #include "mass2gal.h"
 #include "ctimer.h"
+#include "progbar.h"
 
 /* ----------------------------------------- 
    BAO simulations , LSST & BAORadio , 
@@ -397,7 +398,7 @@ sa_size_t Mass2Gal::CreateGalCatalog(int idsim, string fitsname, GalFlxTypDist& 
 
 	size_t totcellcnt=ngals_.SizeX()*ngals_.SizeY()*ngals_.SizeZ();
 	size_t cellcnt=0;
-	size_t lastpercent=0, last10percent=10;
+	ProgressBar pgb(totcellcnt, ProgBarM_Time);
 	for(sa_size_t iz=0; iz<ngals_.SizeZ(); iz++)// Z direction (~redshift direction)
 	  for(sa_size_t iy=0; iy<ngals_.SizeY(); iy++) { // Y direction (transverse plane)
             for(sa_size_t ix=0; ix<ngals_.SizeX(); ix++) {// X direction (transverse plane) 
@@ -491,17 +492,7 @@ sa_size_t Mass2Gal::CreateGalCatalog(int idsim, string fitsname, GalFlxTypDist& 
 	    } // end of loop over ix (cells) 
 	    // ---- progress print 
 	    cellcnt+=ngals_.SizeX();
-	    size_t perccnt=100*cellcnt/totcellcnt;
-	    if (perccnt > lastpercent) {
-	      for(size_t ipp=lastpercent; ipp<perccnt; ipp++) cout << '.';
-	      if (perccnt >= last10percent) { 
-		cout<<perccnt<<'%'; 
-		if (last10percent%40==0) cout<<endl; 
-		last10percent+=10; 
-	      }
-	      lastpercent=perccnt;
-	      cout.flush();
-	    }
+	    pgb.update(cellcnt);
 	  }  // end of loop over iy (cells) 
 	
 	cout <<" \n Mass2Gal::CreateGalaxyCatalog() finished loop"<<endl;
