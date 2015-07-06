@@ -39,7 +39,8 @@ public:
         @param xvals     parameter values of chi-square (must be evenly spaced)
         @param chisq     chi-square value for each parameter
         @param dof       degree of freedom                                    */
-	ChisqStats(TVector<r_8> xvals, TVector<r_8> chisq, double dof=1) {};
+	ChisqStats(TVector<r_8> xvals, TVector<r_8> chisq, double dof=1)
+	  : xvals_(xvals), chisq_(chisq) {};
 	
 	/** Find the best fit parameter value ie parameter value at the minimum 
 	    chi-square                                                            */
@@ -54,7 +55,7 @@ public:
 	//int NearestIndex(double,TVector<r_8>);
 	
 	/** Return chi-square function                                            */
-	TVector<r_8> ReturnChisq(){return Chisq_;};
+	TVector<r_8> ReturnChisq(){return chisq_;};
 	
 	/** Return parameter values of chi-square                                 */
 	TVector<r_8> ReturnXvals(){return xvals_;};
@@ -67,7 +68,7 @@ public:
 	
 protected:
 	TVector<r_8> xvals_;     /**< parameter values of chi-square              */
-	TVector<r_8> Chisq_;     /**< chi-square value for each parameter         */
+	TVector<r_8> chisq_;     /**< chi-square value for each parameter         */
 	double dof_;             /**< degree of freedom                           */
 	double minus_;           /**< lower error range                           */
 	double plus_;            /**< upper error range                           */

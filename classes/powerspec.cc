@@ -8,7 +8,9 @@ PowerSpec::PowerSpec(TArray<r_8> galdens, double Dx, double Dy, double Dz)
 	cout << "    PowerSpec::PowerSpec():"<<endl;
 	
 	Dx_=Dx, Dy_=Dy, Dz_=Dz;
+	
 	ComputeFourier(drho_,four_);
+	cout << "ComputeFourier end" <<endl;
 	SetDKDR();
 
 	zc_=-1;
@@ -147,13 +149,14 @@ void PowerSpec::BlowUpCheck()
 {
 	double corr_at_maxk = exp(-(maxk_*Err_)*(maxk_*Err_));
 	double corr_at_k1 = exp(-(Dkz_*Err_)*(Dkz_*Err_));
-
+	
 	if ( (corr_at_maxk<tol_corr_)&&(Err_>0&&undamp_) ){
 	
 		cout <<endl<<"**************** WARNING *****************"<<endl;
 		cout <<"! Keeping too many radial k's            "<<endl;
 		cout <<"! Power spectrum will probably BLOW UP!  "<<endl;
-		cout <<"! Correction at max radial k = "<< corr_at_maxk <<endl;
+		// DEL-Adeline		cout <<"! Correction at max radial k = "<< corr_at_maxk <<endl;
+		cout <<"! Damping at max radial k = "<< corr_at_maxk <<endl;  // Add-Adeline
 		cout <<      "************** END WARNING ***************"<<endl<<endl;
 		}
 	if ( (corr_at_k1<tol_corr_)&&(Err_>0&&undamp_) ) {
@@ -161,7 +164,8 @@ void PowerSpec::BlowUpCheck()
 		cout <<"************************ WARNING ***********************"<<endl;
 		cout <<"! Array sampling in radial direction is TOO LARGE, Dkz = "<< Dkz_ <<endl;
 		cout <<"! Power spectrum will probably BLOW UP! "<<endl;
-		cout <<"! Correction at 1st radial k wavenumber = "<< corr_at_k1 <<endl;
+		//DEL-Adeline		cout <<"! Correction at 1st radial k wavenumber = "<< corr_at_k1 <<endl;
+		cout <<"! Damping at 1st radial k wavenumber = "<< corr_at_k1 <<endl;  // Add-Adeline
 		double resk = sqrt(-log(tol_corr_))/Err_;
 		cout <<"! Increase array radial direction length from "<< Nz_;
 		cout <<" pixels to roughly "<< (2*PI)/(resk*Dz_) <<" pixels"<<endl; 
@@ -173,7 +177,7 @@ void PowerSpec::BlowUpCheck()
 
 
 double PowerSpec::AccumulatePowerSpectra(HProf& hp, bool pixcor, double maxk, 
-                        double Err, bool undamp, double tol_corr, double snoise)
+                        double Err, bool undamp, double tol_corr, Histo* hnode_, Histo* hkeepMode_, double snoise)
 // Compute spectrum from "four_" and fill profile histogram "hp"
 // (Defaults: Err=0, coeff = 1, bool undamp=true, pixcor=true, snoise=0);
 // Power spectrum in hp is NOT normalised
@@ -186,131 +190,133 @@ double PowerSpec::AccumulatePowerSpectra(HProf& hp, bool pixcor, double maxk,
 // Err is the standard deviation of the photo-z errors in comoving coordinates
 // tol_corr: if divide Fourier coefficient by number greater than this power spectrum will blow up
  { 
-	cout << "    PowerSpec::AccumulatePowerSpectra():"<<endl;
-	maxk_=maxk;
-	Err_=Err;
-	tol_corr_=tol_corr;
-	undamp_=undamp;
+   cout << "    PowerSpec::AccumulatePowerSpectra():"<<endl;
+   maxk_=maxk;
+   Err_=Err;
+   tol_corr_=tol_corr;
+   undamp_=undamp;
+   
+   if(hp.NBins()<0) 
+     throw ParmError("ERROR! HProf bins undefined");
+   
+   hp.Zero();
+   
+   // SHOT NOISE (NOTHING IS DONE WITH THIS AT THIS TIME)
+   if(snoise<=0.) snoise = 0.;
+   //double snoisesq = snoise*snoise / (double)NRtot_;
+   
+   // PHOTO-Z ERROR
+   CheckPZErr();
+   
+   // Blowup Check	
+   BlowUpCheck();
+   
+   // PIXEL CORRECTION
+   //TVector<r_8> vfx(NCx_);
+   if(pixcor) { 	// kz = l*Dkz_
+     cout <<"    Pixel correction is ON"<<endl;
+     //	for(long ix=0;ix<NCx_;ix++) 
+     //		{vfx(ix)=pixelfilter(ix*Dkx_*Dx_/2); vfx(ix)*=vfx(ix);}
+   }
+   else cout <<"    Pixel correction is OFF"<<endl; 
+   
+   double fx, fy, fz;// filter correction
+   double sum=0;
+   double g;
+   int nkeep=0;
+   // wavenumber k = n * 2pi/L where n=wave index and L = length of grid side
+   
+   for(sa_size_t iz=0; iz<four_.SizeZ(); iz++) { // assumed RADIAL direction
+     
+     // get wave number 3RD/RADIAL dim
+     double kz = iz;// wave index for +ve freq
+     if (iz > four_.SizeZ()/2) 
+       kz = four_.SizeZ()-iz;// wave index for -ve freq
+     kz *= Dkz_; // wave number
+     
+     // if pixel filtering
+     if(pixcor) {
+       fz = pixelfilter(kz*Dz_/2);
+       fz *= fz;// squared
+     }
+     else 
+       fz=1;
+     
+     for(sa_size_t iy=0; iy<four_.SizeY(); iy++) { 
+       
+       // get wave number 2ND dim
+       double ky = iy; // wave index for +ve freq
+       if (iy > four_.SizeY()/2) 
+	 ky = four_.SizeY()-iy; // wave index for -ve freq
+       ky *= Dky_; // wave number
+       
+       // if pixel filtering
+       if(pixcor) {
+	 fy = pixelfilter(ky*Dy_/2);
+	 fy *= fy;// squared
+       }
+       else fy=1;
+       
+       for(sa_size_t ix=0; ix<four_.SizeX(); ix++) { // THIS IS THE SHORT DIMENSION, no neg freq
+	 
+	 // get wave number 1ST dim (straightforward: no neg freq)
+	 double kx = ix*Dkx_;
+	 
+	 // if pixel filtering
+	 if(pixcor) {
+	   fx = pixelfilter(kx*Dx_/2);
+	   fx *= fx;// squared
+	 }
+	 else 
+	   fx=1;
+	 
+	 // k modulus (wavevector length)
+	 double kmod = sqrt((kx*kx+ky*ky+kz*kz));
+	 
+	 // Fourier component
+	 complex< r_8 > za = four_(ix, iy, iz);
+	 
+	 // Fourier component * its complex conjugate
+	 double pk = za.real()*za.real()+za.imag()*za.imag();
+	 
+	 //fx = (pixcor) ? vfx(ix): 1.;
+	 double f = fx*fy*fz;
+	 
+	 if (hnode_) 
+	   hnode_->Add(kmod);
+	 
+	 if(Err_>0 && undamp_)  // if want to undamp	
+	   
+	   g = exp(-(kz*Err_)*(kz*Err_));
+	 
+	 else g =  1.;
+	 
+	 if (kz<=maxk_)
+	   { hp.Add(kmod, pk/(f*g));  sum+=pk; nkeep++; if (hkeepMode_)   hkeepMode_->Add(kmod);}
+	 
+       }// end loop over X dim
+     }// end loop over Y dim
+     
+   }// end loop over Z dim
+   
+   if(Err>0) {
+     cout <<"    Number of wavevectors="<< four_.Size() <<", N kept="<< nkeep;
+     cout <<", therefore N not included: "<< four_.Size()-nkeep <<endl;
+   }
+   
+   cout <<"    Sum of Fourier coefficients sq ="<< sum <<endl;
+   
+   
+   return sum;
+   cout << "    EXIT PowerSpec::AccumulatePowerSpectra():"<<endl<<endl;
+   
+ };
 
-	if(hp.NBins()<0) 
-		throw ParmError("ERROR! HProf bins undefined");
-	
-	hp.Zero();
-	
-	// SHOT NOISE (NOTHING IS DONE WITH THIS AT THIS TIME)
-	if(snoise<=0.) snoise = 0.;
-	//double snoisesq = snoise*snoise / (double)NRtot_;
-  
-	// PHOTO-Z ERROR
-	CheckPZErr();
-		
-	// Blowup Check	
-	BlowUpCheck();
-		
-	// PIXEL CORRECTION
-	//TVector<r_8> vfx(NCx_);
-	if(pixcor) { // kz = l*Dkz_
-		cout <<"    Pixel correction is ON"<<endl;
-	//	for(long ix=0;ix<NCx_;ix++) 
-	//		{vfx(ix)=pixelfilter(ix*Dkx_*Dx_/2); vfx(ix)*=vfx(ix);}
-		}
-	else cout <<"    Pixel correction is OFF"<<endl; 
-	
-	double fx, fy, fz;// filter correction
-	double sum=0;
-	int nkeep=0;
-	// wavenumber k = n * 2pi/L where n=wave index and L = length of grid side
 
-	for(sa_size_t iz=0; iz<four_.SizeZ(); iz++) { // assumed RADIAL direction
-		
-		// get wave number 3RD/RADIAL dim
-		double kz = iz;// wave index for +ve freq
-		if (iz > four_.SizeZ()/2) 
-			kz = four_.SizeZ()-iz;// wave index for -ve freq
-		kz *= Dkz_; // wave number
-		
-		// if pixel filtering
-		if(pixcor) {
-			fz = pixelfilter(kz*Dz_/2);
-			fz *= fz;// squared
-			}
-		else 
-			fz=1;
-		
-		for(sa_size_t iy=0; iy<four_.SizeY(); iy++) { 
-			
-			// get wave number 2ND dim
-			double ky = iy; // wave index for +ve freq
-			if (iy > four_.SizeY()/2) 
-				ky = four_.SizeY()-iy; // wave index for -ve freq
-			ky *= Dky_; // wave number
-
-			// if pixel filtering
-			if(pixcor) {
-				fy = pixelfilter(ky*Dy_/2);
-				fy *= fy;// squared
-				}
-			else fy=1;
-			
-			for(sa_size_t ix=0; ix<four_.SizeX(); ix++) { // THIS IS THE SHORT DIMENSION, no neg freq
-	
-				// get wave number 1ST dim (straightforward: no neg freq)
-				double kx = ix*Dkx_;
-
-				// if pixel filtering
-				if(pixcor) {
-					fx = pixelfilter(kx*Dx_/2);
-					fx *= fx;// squared
-					}
-				else 
-					fx=1;
-
-				// k modulus (wavevector length)
-				double kmod = sqrt((kx*kx+ky*ky+kz*kz));
-
-				// Fourier component
-				complex< r_8 > za = four_(ix, iy, iz);
-
-				// Fourier component * its complex conjugate
-				double pk = za.real()*za.real()+za.imag()*za.imag();
-				
-				//fx = (pixcor) ? vfx(ix): 1.;
-				double f = fx*fy*fz;
-				
-				if(Err_>0&&undamp_) { // if want to undamp	
-				
-					double g = exp(-(kz*Err_)*(kz*Err_));
-					//if ((ix!=0)&&(iy!=0)&&(iz!=0)&&(kz<=maxk_))
-					if (kz<=maxk_)
-						{hp.Add(kmod, pk/(f*g)); sum+=pk; nkeep++;}
-					}
-				else // no undamp
-					//if ((ix!=0)&&(iy!=0)&&(iz!=0)&&(kz<=maxk_))  
-					if (kz<=maxk_)
-						{hp.Add(kmod, pk/f); sum+=pk; nkeep++;}
-
-				}// end loop over X dim
-			}// end loop over Y dim
-		}// end loop over Z dim
-
-    if(Err>0) {
-	    cout <<"    Number of wavevectors="<< four_.Size() <<", N kept="<< nkeep;
-	    cout <<", therefore N not included: "<< four_.Size()-nkeep <<endl;
-        }
-        
-    cout <<"    Sum of Fourier coefficients sq ="<< sum <<endl;
-
-    return sum;
-    cout << "    EXIT PowerSpec::AccumulatePowerSpectra():"<<endl<<endl;
-
-};
-
-
-void PowerSpec::WritePS(string fname, HProf& Pdata, r_4 Voldata, 
-                                            string PSimlssfile, double meandens)
+void PowerSpec::WritePS(string fname, HProf& Pdata, r_4 Voldata, string PSimlssfile, double meandens)
 {
-
-	cout << "    PowerSpec::WritePS()"<<endl;
+	cout << "    PowerSpec::WritePS()" << " meandens" << meandens <<endl;
+	
 	// Read in SimLSS power spectra into an array
 	ifstream ifs(PSimlssfile.c_str());
 	TArray<r_8> SimLSSPSfile;
@@ -325,7 +331,6 @@ void PowerSpec::WritePS(string fname, HProf& Pdata, r_4 Voldata,
 	cout <<" rows and "<< SimLSSPSfile.SizeY() <<" columns"<<endl;
 	
 	// Make an interpolation table
-	
 	vector<double> kvals,pvals1,pvals2;
 	for(int kk=0; kk<nr; kk++) {
 		
@@ -335,18 +340,20 @@ void PowerSpec::WritePS(string fname, HProf& Pdata, r_4 Voldata,
 		kvals.push_back(kv);
 		pvals1.push_back(p1);
 		pvals2.push_back(p2);
-		//cout << kvals[kk]<<endl;
+		//cout << kvals[kk] << "  "<< pvals1[kk] << "  "<< pvals2[kk] <<endl;
 		}
 	double kmin=kvals[0],kmax=kvals[nr-1];
 	cout <<"    K range is "<< kmin <<"<k<"<< kmax <<endl;
 	
+	
 	int_8 nk=1000000;
 	SInterp1D simlss,simlssf; 
 	simlss.DefinePoints(kvals,pvals1,kmin,kmax,nk);
+	cout << "define point s OK "<< endl;
 	simlssf.DefinePoints(kvals,pvals2,kmin,kmax,nk);
 	
 	cout << endl;
-
+	
 	// Data power spectrum
 	Histo Pdatah=Pdata.GetHisto();
 	// number of k bins	
@@ -376,7 +383,7 @@ void PowerSpec::WritePS(string fname, HProf& Pdata, r_4 Voldata,
 
 			r_8 Pnorm_uncorr = Praw*Voldata*(1+meandens)*(1+meandens);
 			r_8 Pnorm = Pnorm_uncorr*(Pslss/Pslssf);
-			
+
 			outp << kv <<"    "<< Pnorm <<"    "<< Pnorm_uncorr <<"    ";
 			outp << Praw*Voldata <<"    "<< Pslss*Volsimlss <<"    ";
 			outp << Pslssf*Volsimlss <<endl;
@@ -391,7 +398,7 @@ void PowerSpec::WritePS(string fname, HProf& Pdata, r_4 Voldata,
 
 
 void PowerSpec::WritePS(string fname, HProf& Pdata, r_4 Voldata, HProf& PSimlss, 
-                                  HProf& PSimlssf,r_4 Volsimlss, double meandens)
+                                  HProf& PSimlssf,r_4 Volsimlss, HProf& Pdata_noise,  double meandens, double nGalGrid, Histo* hmode_, Histo* hkeepMode_)
 // Writes 4 power spectra to a text file
 // the format is:
 // [k values] [normalised galaxy PS] [normalised-uncorrected galaxy PS] 
@@ -401,11 +408,25 @@ void PowerSpec::WritePS(string fname, HProf& Pdata, r_4 Voldata, HProf& PSimlss,
 // where f(k) is found by dividing the SimLSS PS by the SimLSS PS when delta<-1 ->-1.
 // Additional corrections will need to be made for shot noise, photo-z errors
 {
-	cout << "    PowerSpec::WritePS()"<<endl;
+	cout << "    PowerSpec::WritePS()" << " meandens "<< meandens  <<endl;
 	Histo Pdatah=Pdata.GetHisto();
 	Histo PSimlssh =PSimlss.GetHisto();
 	Histo PSimlssfh=PSimlssf.GetHisto();
+	
+	Histo Pnoiseh=Pdata_noise.GetHisto();
+	
+	Histo& hmode = (*hmode_);
+  	Histo& hkeepMode = (*hkeepMode_);
+  	
+	cout << "test "<< endl;
+	Histo fracmodok;
 
+	cout <<"check Nbins : " << Pdatah.NBins() <<endl;
+	if((hmode_!=NULL) && (hkeepMode_!=NULL)){
+	   fracmodok = hkeepMode/hmode;
+	   cout << " " << hmode.NBins() << " " << hkeepMode.NBins() <<endl;
+	}
+	
 	// number of k bins	
 	int_4 nbk=Pdatah.NBins();
 	
@@ -428,11 +449,15 @@ void PowerSpec::WritePS(string fname, HProf& Pdata, r_4 Voldata, HProf& PSimlss,
 		inp.clear(ios::failbit);
 		cout << "Writing to file ..." << fname.c_str() << endl<< endl<< endl;
 		outp.open(fname.c_str(), ofstream::out);
-		outp << "# Volume of data = "<< Voldata <<", Volume of SimLSS = ";
-		outp << Volsimlss <<", mean density of fudged simlss grid = "<< meandens <<endl;
+		
+		outp << "# Volume of data = "<< Voldata <<", Volume of SimLSS = "<< Volsimlss;
+		//modif Adeline write also ngalGrid,  hnode_,and hkeepMode_ (number of total mode and kept mode (if GaussError)
+		outp << ", number of galaxies in weight grid = " << nGalGrid <<endl;
 		outp << "# Nx,Ny,Nz,R(Mpc),zc = "<< Nx_ <<","<< Ny_ <<","<< Nz_ <<",";
 		outp << Dx_ <<","<< zc_ <<endl;
 		
+		double sigma_factor = sqrt(4. * PI * PI / Nx_ / Ny_ /  Nz_ / Dx_/Dy_/Dz_ /  Pdatah.BinWidth());
+		//outp << "k \t Pnorm \t Pnorm_uncorr \t Praw*Voldata \t  Pslss*Volsimlss \t Pslssf*Volsimlss \t nmode \t nkeepMode \t  fracmod" <<endl;
 		for(int_4 i=0;i<nbk;i++) {
 		
 			r_8 kvals=Pdatah.BinCenter(i);
@@ -448,10 +473,26 @@ void PowerSpec::WritePS(string fname, HProf& Pdata, r_4 Voldata, HProf& PSimlss,
 			r_8 Pnorm_uncorr = Praw*Voldata*(1+meandens)*(1+meandens);
 			r_8 Pnorm = Pnorm_uncorr*(Pslss/Pslssf);
 			
+			r_8 kv4=Pnoiseh.BinCenter(i);
+			if(abs(kvals-kv4)>eps)
+				throw ParmError("ERROR! k bins are different between data and shot-noise");
 
-			outp << kvals <<"    "<< Pnorm <<"    "<< Pnorm_uncorr <<"    ";
-			outp << Praw*Voldata <<"    "<< Pslss*Volsimlss;
-			outp <<"    "<< Pslssf*Volsimlss <<endl;
+			r_8 Pnoise = Pnoiseh.operator()(i) *Voldata*(1+meandens)*(1+meandens)*(Pslss/Pslssf);
+			r_8 sigmaP  = (Pnorm - Pnoise) / kvals * sigma_factor;
+		
+			r_8 nmode = 0;
+			r_8 nKeepMode = 0;
+			r_8 fracmod = 0;
+			if((hmode_!=NULL) && (hkeepMode_!=NULL)){
+			   nmode = hmode.operator()(i);
+			   nKeepMode = hkeepMode.operator()(i);
+			   fracmod = fracmodok.operator()(i);
+			}
+			
+			outp << kvals <<"    \t"<< Pnorm <<"    \t"<< Pnorm_uncorr <<"    \t";
+			outp << Praw*Voldata <<"    \t"<< Pslss*Volsimlss;
+			outp <<"    \t"<< Pslssf*Volsimlss  <<"    \t"<< Pnoise  <<"    \t"<< sigmaP ;
+			outp << "   \t"<< nmode << "   \t"<< nKeepMode << "   \t"<< fracmod <<endl;
 			}
 		outp.close();
 		}

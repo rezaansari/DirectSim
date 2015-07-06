@@ -108,8 +108,7 @@ void usage(void) {
         cout << "  with the -m option                                   "<<endl;
         cout << endl;
 						
-		cout << "  This code uses the cosmology of double h=0.71,       "<<endl;
-		cout << "  OmegaM=0.267804, OmegaL=0.73 (SimLSS cosmology)      "<<endl;
+		cout << "  This code reads the cosmology from the input catalog. "<<endl;
 		cout << endl;
 
 		cout << "  EXAMPLE 1: A galaxy catalog is stored in a file      "<<endl;
@@ -130,6 +129,11 @@ void usage(void) {
 	cout << " -C : input_catalog : FITS filename containing galaxy catalog"<<endl;
 	cout << " -O : out_grids_name : Write gridded data to this FITS file"<<endl;
 	cout << " -a : SkyArea : Specify sky area (radians)                 "<<endl;
+	cout << " -E : Error : Add a Gaussian error on z-axis of            "<<endl;
+	cout << "      sigma = E(1+redshift) (properly translated in Mpc)   "<<endl;
+	cout << " -e : Error : Add a Gaussian error on redshift of          "<<endl;
+	cout << "      sigma = E(1+redshift) (properly translated in Mpc)   "<<endl;
+	cout << " -S : Error : random seed, must be set for simulations     "<<endl;
 	cout << " -r : isZRadial: z-dimension of catalog IS radial direction"<<endl;
 	cout << " -P : Nx,Ny,Nz,zref,Res : Number of pixels, redshift of    "<<endl;
 	cout << "      central pixel, pixel size - to specify how to grid   "<<endl;
@@ -175,53 +179,64 @@ int main(int narg, char* arg[]) {
 	// GRID SPEC PARS
 	double R = 8.;		    // Grid cell size in Mpc (exact)
 	long Nx=0,Ny=0,Nz=0;	// Grid has Nx,Ny,Nz pixels (approx)
-	double zref=0;			// Grid centered at zref (exact)
+	double zref=0,PZerrAxis=0,PzerrReds=0;	// Grid centered at zref (exact) + (Cecile) error on z (redshit or coordinate, it depends)
 	double nc=1;			// Mean density of random grid
 	// DEBUGGING
 	string debug_out;
 	bool DoDebug = false;
+	bool RandomSeed = false;
 	//bool SaveArr = false;
 	
 	//--- decoding command line arguments 
 	cout << " ==== decoding command line arguments ===="<<endl;
 	char c;
-	while((c = getopt(narg,arg,"hrC:a:m:O:P:s:z:d:")) != -1) {
-	    switch (c) {
-	        case 'C' :
-		        input_catalog = optarg;
-		        break;
-		    case 'O' :
-		        out_grids_name = optarg;
-		        break;
-	        case 'a' :
-		        sscanf(optarg,"%lf",&SkyArea);
-		        break;
-		    case 'r' :
-		        isZRadial = true;
-		        break;
-		    case 'P' :
-		        sscanf(optarg,"%ld,%ld,%ld,%lf,%lf",&Nx,&Ny,&Nz,&zref,&R);
-		        break; 
-		    case 'z' :
-		        zcols = optarg; // list of z column names to read in
-		        isZColGiven = true;
-		        break;
-	  	    case 'm' :
-		        sscanf(optarg,"%lf",&nc);
-		        break;
-	        case 's' :
-		        sffiles = optarg;
-		        doSFCorr = true;
-		        break;
-	        case 'd' :
-		        debug_out = optarg; // filename of debug files
-		        DoDebug = true;
-		        break;
-	        case 'h' :
-	            default :
-		        usage(); return -1;
-	        }
-	   }    
+	while((c = getopt(narg,arg,"hrSC:O:a:E:e:r:P:z:m:s:d:h:")) != -1) {
+	  switch (c) {
+	  case 'C' :
+	    input_catalog = optarg;
+	    break;
+	  case 'O' :
+	    out_grids_name = optarg;
+	    break;
+	  case 'a' :
+	    sscanf(optarg,"%lf",&SkyArea);
+	    break;
+	  case 'E' :
+	    sscanf(optarg,"%lf",&PZerrAxis);
+	    break;
+	  case 'e' :
+	    sscanf(optarg,"%lf",&PzerrReds);
+	    break;
+	  case 'S' :
+	    RandomSeed = true;
+	    cout << "Montecarlo mode"<< endl;
+	    break;
+	  case 'r' :
+	    isZRadial = true;
+	    break;
+	  case 'P' :
+	    sscanf(optarg,"%ld,%ld,%ld,%lf,%lf",&Nx,&Ny,&Nz,&zref,&R);
+	    break; 
+	  case 'z' :
+	    zcols = optarg; // list of z column names to read in
+	    isZColGiven = true;
+	    break;
+	  case 'm' :
+	    sscanf(optarg,"%lf",&nc);
+	    break;
+	  case 's' :
+	    sffiles = optarg;
+	    doSFCorr = true;
+	    break;
+	  case 'd' :
+	    debug_out = optarg; // filename of debug files
+	    DoDebug = true;
+	    break;
+	  case 'h' :
+	  default :
+	    usage(); return -1;
+	  }
+	}    
 	cout << "    - finished decoding command line arguments "<<endl<<endl;
 				
 	// split up string to read in the two selection function filenames, and possibly 3rd string
@@ -334,32 +349,76 @@ int main(int narg, char* arg[]) {
 	cout << " Resource usage info : \n" << res << endl;
 	
 	
-	// Set cosmology (should really read this from galaxy catalog header)
-	cout << "0.1/ Initialise cosmology:"<<endl;
-	double h = 0.71, OmegaM = 0.267804, OmegaL = 0.73;
-	SimpleUniverse su(h, OmegaM,OmegaL);
-	su.SetFlatUniverse_OmegaMatter();
-	double OmegaB = su.OmegaBaryon();
-	cout <<"    OmegaK="<< su.OmegaCurv() <<", OmegaM="<< su.OmegaMatter();
-	cout <<", OmegaL="<< OmegaL <<", OmegaB="<< OmegaB <<", H0="<< su.H0() <<endl;
+	// Set cosmology (read this from galaxy catalog header)
+	cout << "     Initialise cosmology: (read from catalog)"<<endl;
 	
+	//////////  modif Adeline : read cosmo in Fits_RO header
+	string H0_s, OmegaM_s, OmegaL_s, OmegaB_s, OmegaR_s, wDE_s, wDA_s, Sigma8_s, Ns_s;
+	double h, OmegaM, OmegaL, OmegaB, OmegaR, wDE, wDA, Sigma8, n_s;
+	H0_s = fin.KeyValue("H0");
+	OmegaM_s = fin.KeyValue("OMEGAM0");
+	OmegaL_s = fin.KeyValue("OMEGADE0");
+	OmegaB_s = fin.KeyValue("OMEGAB0");
+	OmegaR_s = fin.KeyValue("OMEGAR0");
+	wDE_s = fin.KeyValue("DE_W0");
+	wDA_s = fin.KeyValue("DE_WA");
+	Sigma8_s = fin.KeyValue("SIGMA8");
+	Ns_s = fin.KeyValue("N_S");
+
+	h = atof(H0_s.c_str()) / 100.;
+	OmegaM = atof(OmegaM_s.c_str());
+	OmegaL = atof(OmegaL_s.c_str());
+	OmegaB = atof(OmegaB_s.c_str());
+	OmegaR = atof(OmegaR_s.c_str());
+	wDE = atof(wDE_s.c_str());
+	wDA = atof(wDA_s.c_str());
+	Sigma8 = atof(Sigma8_s.c_str());
+	n_s = atof(Ns_s.c_str());
+
+	SimpleUniverse su(h, OmegaM, OmegaL);
+	su.SetOmegaBaryon(OmegaB);
+	su.SetOmegaRadiation(OmegaR);
+	su.SetSigma8(Sigma8);
+	su.SetSpectralIndex(n_s);
+	su.SetFlatUniverse_OmegaLambda(); // Cecile modif - no be sure that it is flat by adjusting OmegaLambda
+	cout << "     OmegaK="<< su.OmegaCurv() <<", OmegaM="<< su.OmegaMatter();
+	cout << ", OmegaL="<< su.OmegaLambda() <<", OmegaB="<< su.OmegaBaryon();
+	cout << ", Omega_rad=" << su.OmegaRadiation() << ", Omega_cdm=" << su.OmegaCDM() <<", H0="<< su.H0() << endl;
+	cout << "check flatness: OmegaTot=" << su.OmegaTotal() << endl;
+	if (wDE != -1 or wDA !=0)  
+	  su.SetDarkEnergy(su.OmegaLambda(),wDE,wDA);
+	
+	cout << " and w0=" << su.wDE() << ", wA=" << su.waDE() << ", sigma8=" << su.Sigma8() << endl;
+	cout << "Spectral index=" << su.Ns() << endl;
+	cout << endl;
 	
 	// Initialize grid data class
 	RandomGenerator rg; // need this for cat2grid
 	FitsInOutFile fos(out_grids_name, FitsInOutFile::Fits_Create);
+	if (RandomSeed) {
+	  rg.AutoInit(0);
+	  cout << "Seed automatically generated" << endl;
+	} else {
+	  long seed=1;
+	  rg.SetSeed(seed);
+	}
+
 	Cat2Grid cat(galaxy_catalog, su, rg, fos, ZOCol, ZSCol, isZRadial);
 	if (DoDebug)
 		cat.SetDebugOutroot(debug_out);
 	cout << "    The number of gals in whole simulation is "<< cat.ReturnNgAll() <<endl;
 	
-	
+	if (PZerrAxis > 0.)  cat.SetGaussErrAxis(PZerrAxis,zref,RandomSeed);
+	if (PzerrReds > 0.)  cat.SetGaussErrRedshift(PzerrReds,zref,RandomSeed);
+
 	// Compute min and max coordinates and min max redshift
 	// only actually really need to do this if correcting for selection function
 	cout <<"1/ Find minimum and maximum galaxy cartesian coordinates"<<endl;
 	double maxdL; // luminosity distance of largest z in catalog: spec-z or phot-z according to TypePZ
-	maxdL = cat.FindMinMaxCoords();
-	cout << "    Maximum luminosity distance = "<< maxdL <<endl;
-	
+	if (Nx == 0)  {
+	  maxdL = cat.FindMinMaxCoords();
+	  cout << "    Maximum luminosity distance = "<< maxdL <<endl;
+	} else cout << "Nothing to do : grid provided"  <<endl;
 	
 	res.Update();
 	cout << " Computed FindMinMaxCoords()"<<endl;

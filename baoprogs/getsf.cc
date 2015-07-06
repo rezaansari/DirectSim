@@ -180,15 +180,49 @@ int main(int narg, char *arg[])	{
 	
 	
 		// Set cosmology
-		cout << "0.1/ Initialise cosmology:"<<endl;
-		double h = 0.71, OmegaM = 0.267804, OmegaL = 0.73;
-		SimpleUniverse su(h, OmegaM, OmegaL);
-		su.SetFlatUniverse_OmegaMatter();
-		double OmegaB = su.OmegaBaryon();
-		cout <<"    OmegaK = "<< su.OmegaCurv() <<", OmegaM="<< su.OmegaMatter();
-		cout <<", OmegaL = "<< OmegaL <<", OmegaB = "<< OmegaB;
-		cout <<", H0 = "<< su.H0() <<endl;
+		cout << "     Initialise cosmology: (same as SimLSS)"<<endl;
 		
+		//////////  modif Adeline : read cosmo in Fits_RO header
+		string H0_s, OmegaM_s, OmegaL_s, OmegaB_s, OmegaR_s, wDE_s, wDA_s, Sigma8_s, Ns_s;
+		double h, OmegaM, OmegaL, OmegaB, OmegaR, wDE, wDA, Sigma8, n_s;
+		H0_s = fin.KeyValue("H0");
+		OmegaM_s = fin.KeyValue("OMEGAM0");
+		OmegaL_s = fin.KeyValue("OMEGADE0");
+		OmegaB_s = fin.KeyValue("OMEGAB0");
+		OmegaR_s = fin.KeyValue("OMEGAR0");
+		wDE_s = fin.KeyValue("DE_W0");
+		wDA_s = fin.KeyValue("DE_WA");
+		Sigma8_s = fin.KeyValue("SIGMA8");
+		Ns_s = fin.KeyValue("N_S");
+	
+		h = atof(H0_s.c_str()) / 100.;
+		OmegaM = atof(OmegaM_s.c_str());
+		OmegaL = atof(OmegaL_s.c_str());
+		OmegaB = atof(OmegaB_s.c_str());
+		OmegaR = atof(OmegaR_s.c_str());
+		wDE = atof(wDE_s.c_str());
+		wDA = atof(wDA_s.c_str());
+		Sigma8 = atof(Sigma8_s.c_str());
+		n_s = atof(Ns_s.c_str());
+
+		SimpleUniverse su(h, OmegaM, OmegaL);
+		su.SetOmegaBaryon(OmegaB);
+		su.SetOmegaRadiation(OmegaR);
+		su.SetSigma8(Sigma8);
+		su.SetSpectralIndex(n_s);
+		su.SetFlatUniverse_OmegaLambda(); // Cecile modif - no be sure that it is flat by adjusting OmegaLambda
+		
+		cout << "     OmegaK="<< su.OmegaCurv() <<", OmegaM="<< su.OmegaMatter();
+		cout << ", OmegaL="<< su.OmegaLambda() <<", OmegaB="<< su.OmegaBaryon();
+		cout << ", Omega_rad=" << su.OmegaRadiation() << ", Omega_cdm=" << su.OmegaCDM() <<", H0="<< su.H0() << endl;
+		cout << "check flatness: OmegaTot=" << su.OmegaTotal() << endl;
+		if (wDE != -1 or wDA !=0)  
+		  su.SetDarkEnergy(su.OmegaLambda(),wDE,wDA);
+		
+		cout << " and w0=" << su.wDE() << ", wA=" << su.waDE() << ", sigma8=" << su.Sigma8() << endl;
+		cout << "Spectral index=" << su.Ns() << endl;
+		cout << endl;
+			
 		
 		// Calculate selection function
 		RandomGenerator rg;

@@ -2,10 +2,10 @@
 
 double ChisqStats::BestFit()
 {
-
+  
     double minchisq, maxchisq;
-    Chisq_.MinMax(minchisq, maxchisq);
-    int indexmin = findClosestElement(Chisq_, minchisq);
+    chisq_.MinMax(minchisq, maxchisq);
+    int indexmin = findClosestElement(chisq_, minchisq);
 
     cout <<"    Minimum chisq per d.o.f. (d.o.f="<< dof_ <<") = "<< minchisq/dof_ <<endl;
     cout <<"    Value of x at min(chisq) = "<< xvals_(indexmin) <<endl;
@@ -24,7 +24,7 @@ void ChisqStats::ErrSig(double& siglow, double& sighigh, double clevel, int npt)
 // avoids more NaNs and therefore gives a more accurate answer
     int ylevelstep=100;
 
-    TVector<r_8> logPraw = -0.5*Chisq_;
+    TVector<r_8> logPraw = -0.5*chisq_;
 
     // REMOVE ANY XVALUES WHERE LOGP=INF
     
