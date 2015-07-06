@@ -458,10 +458,10 @@ int main(int narg, char* arg[])
 		string outfile;
 		outfile = outfileroot + "_ngal.txt";//"_real" + ss.str() + "_ngal.txt";
 		cout <<"    Write ngal power spectrum to "<<outfile<<endl;
-		psgals.WritePS(outfile,hpgals,volgrid,hp,hpf,volsim);
+		psgals.WritePS(outfile,hpgals,volgrid,hp,hpf,volsim,hprand);
 		outfile = outfileroot + "_rgal.txt"; //"_real" + ss.str() + "_rgal.txt";
 		cout <<"    Write rgal power spectrum to "<<outfile<<endl;
-		psrand.WritePS(outfile,hprand,volgrid,hp,hpf,volsim);
+		psrand.WritePS(outfile,hprand,volgrid,hp,hpf,volsim,hprand);
 		
 		m2g.ResetSmGrids();
 	//	}

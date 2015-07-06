@@ -285,13 +285,13 @@ public:
     inline double GetCellZ(sa_size_t k)  { return (k-(idmidz_-1))*Dz_+DCref_; }
     
     /** Convert between Cartesian and spherical coordinates 
-        NOTE : the names theta, phi are reversed compared to the usual convention 
+        NOTE : the names theta, phi are conformed to the usual convention 
         @param x        x coordinate
         @param y        y coordinate
         @param z        z coordinate
         @param r        r coordinate
         @param phi      phi coordinate
-        @param theta    theta coordiante                                      */
+        @param theta    theta coordinate                                      */
     void Conv2SphCoord(double x, double y, double z, double& r, double& phi, double& theta);
         
     /** Draw absolute magnitude in B band MB and gal type: 0-5=early, 6-40=late,
@@ -314,7 +314,7 @@ public:
     
     
     /* CLASS VARIABLES */
-// shouldn't these be protected????
+protected:
 
     //SelectionFunctionInterface* selfuncp_;// pointer to selection function
     int_8 ng_;					    /**< Number of galaxies                   */

@@ -10,7 +10,7 @@
   * @todo why are GalFlxTypDist and extinct arguments to CreateNzHisto?
   *
   * @author Alex Abate
-  * Contact: abate@email.arizona.edu
+  * Contact: abate@email.arizona.edu1
   *
   */
 
@@ -155,9 +155,10 @@ int main(int narg, char* arg[]) {
 	string outfile;           // name of file to output to
 	string debug_out;         // write output to here if debugging 
 	double maxRadius = 6.3;   // max radius in radians gal can be from sim center
-	bool doSkyAreaCut=false;  // throw out gals with phi>maxRadius
+	bool doSkyAreaCut=false;  // throw out gals with theta (co-tangent wrt z axis)>maxRadius
 	bool doVeryFaintCut=false;// cut on min absolute magnitude(z) 
 	int out_type = 0;         // output type (0=normal,1=simple,2=z only,3=n(z) histo) 
+	//	bool doDebug=false;       // write out ngals, mass cubes
 	bool doDebug=false;       // write out ngals, mass cubes
 	bool doRandPos=false;     // randomize galaxy positions in cells
 	//bool HistoOnly=false; // only histogram of z
@@ -257,7 +258,7 @@ int main(int narg, char* arg[]) {
 		cout << " density of "<< ngal_per_cell <<endl;
 	    }
 	if (doSkyAreaCut)
-		cout << "     Keeping galaxies within phi<"<< maxRadius <<endl; 
+		cout << "     Keeping galaxies within theta<"<< maxRadius <<endl; 
 	if (doRandPos)
 		cout << "     Randomising galaxy positions within pixel"<<endl;
     //-- end command line arguments
@@ -288,12 +289,47 @@ int main(int narg, char* arg[]) {
    
     // Initialize cosmological parameters 
 	cout << "     Initialise cosmology: (same as SimLSS)"<<endl;
-	double h = 0.71, OmegaM = 0.267804, OmegaL = 0.73;
+
+	//////////  modif Adeline : read cosmo in Fits_RO header
+	string H0_s, OmegaM_s, OmegaL_s, OmegaB_s, OmegaR_s, wDE_s, wDA_s, Sigma8_s, Ns_s;
+	double h, OmegaM, OmegaL, OmegaB, OmegaR, wDE, wDA, Sigma8, n_s;
+	H0_s = fin.KeyValue("H0");
+	OmegaM_s = fin.KeyValue("OMEGAM0");
+	OmegaL_s = fin.KeyValue("OMEGADE0");
+	OmegaB_s = fin.KeyValue("OMEGAB0");
+	OmegaR_s = fin.KeyValue("OMEGAR0");
+	wDE_s = fin.KeyValue("DE_W0");
+	wDA_s = fin.KeyValue("DE_WA");
+	Sigma8_s = fin.KeyValue("SIGMA8");
+	Ns_s = fin.KeyValue("N_S");
+
+	h = atof(H0_s.c_str()) / 100.;
+	OmegaM = atof(OmegaM_s.c_str());
+	OmegaL = atof(OmegaL_s.c_str());
+	OmegaB = atof(OmegaB_s.c_str());
+	OmegaR = atof(OmegaR_s.c_str());
+	wDE = atof(wDE_s.c_str());
+	wDA = atof(wDA_s.c_str());
+	Sigma8 = atof(Sigma8_s.c_str());
+	n_s = atof(Ns_s.c_str());
+	
 	SimpleUniverse su(h, OmegaM, OmegaL);
-	su.SetFlatUniverse_OmegaMatter();
+	su.SetOmegaBaryon(OmegaB);
+	su.SetOmegaRadiation(OmegaR);
+	su.SetSigma8(Sigma8);
+	su.SetSpectralIndex(n_s);
+	su.SetFlatUniverse_OmegaLambda(); // Cecile modif - to be sure that it is flat by adjusting OmegaLambda
+
 	cout << "     OmegaK="<< su.OmegaCurv() <<", OmegaM="<< su.OmegaMatter();
 	cout << ", OmegaL="<< su.OmegaLambda() <<", OmegaB="<< su.OmegaBaryon();
-	cout << ", H0="<< su.H0() <<endl;
+	cout << ", Omega_rad=" << su.OmegaRadiation() << ", Omega_cdm=" << su.OmegaCDM() <<", H0="<< su.H0() << endl;
+	cout << "check flatness: OmegaTot=" << su.OmegaTotal() << endl;
+	// Cecile modif
+	if (wDE != -1 or wDA !=0)  
+	  su.SetDarkEnergy(su.OmegaLambda(),wDE,wDA);
+	
+	cout << " and w0=" << su.wDE() << ", wA=" << su.waDE() << ", sigma8=" << su.Sigma8() << endl;
+	cout << "Spectral index=" << su.Ns() << endl;
 	cout << endl;
 	
 	
@@ -355,7 +391,7 @@ int main(int narg, char* arg[]) {
 	cout << " ... GOODS B band: Early types, Late types, Starbursts"<<endl;
 	cout << " ... see Table 3 in Dahlen et al 2005"<<endl;
 
-	/*  --- Modified by Reza  , see below 
+	//  --- Modified by Reza  , see below 
 	string LFplace;
 	char * plf=getenv("SIMBAOLF");
 	if (plf==NULL) {
@@ -366,9 +402,9 @@ int main(int narg, char* arg[]) {
 		LFplace=plf;
 		cout <<"    Location of LF file is "<< LFplace <<endl;
 		}
-	string LFfile = LFplace +	"GOODS_B_LF.txt";// add an option for this
+	string LFfile = LFplace + "GOODS_B_LF.txt";// add an option for this
 
-	/*  
+	 
 	ifstream ifs;
 	ifs.open(LFfile.c_str(), ifstream::in);
 	if (ifs.fail())
@@ -378,10 +414,11 @@ int main(int narg, char* arg[]) {
 	sa_size_t nr, nc;
 	LFTable.ReadASCII(ifs,nr,nc);
 	cout << " rdlss: from LFTable, nr="<<nr<<" nc="<<nc<<endl;
-	cout << LFTable ;
+//	cout << LFTable ;
 	
 	int MstarCol=2, AlphaCol=3, PhiStarCol=4;
 	// ALL GALAXIES
+	/*
 	double MstarAz1=LFTable(MstarCol,13),alpAz1=LFTable(AlphaCol,13),
 	                                     phistarAz1=LFTable(PhiStarCol,13)*1e-4;
 	double MstarAz2=LFTable(MstarCol,14),alpAz2=LFTable(AlphaCol,14),
@@ -412,8 +449,8 @@ int main(int narg, char* arg[]) {
 	                                      phistarSz2=LFTable(PhiStarCol,8)*1e-4;
 	double MstarSz3=LFTable(MstarCol,12),alpSz3=LFTable(AlphaCol,12),
 	                                     phistarSz3=LFTable(PhiStarCol,12)*1e-4;
-	*/
-
+	
+	/*
 	//---- reading and initializing the LF (Schechter) functions 
 	string LFfile = "GOODS_B_LF.txt";// add an option for this
 	cout << " rdlss: reading LF params from file:"<<LFfile<<endl;
@@ -428,6 +465,43 @@ int main(int narg, char* arg[]) {
 	double MstarSz3, alpSz3, phistarSz3;
 	lfpars.ReturnParsBini(MstarSz3, alpSz3,phistarSz3,2,3);
 	//----  fin modif Reza 
+	*/
+	////////////////////// modif Adeline (inversion between colomn and row) //////////////
+	int z1row=0, z2row=1, z3row=2;
+	// ALL GALAXIES
+	double MstarAz1=LFTable(MstarCol,z1row),alpAz1=LFTable(AlphaCol,z1row),
+	                                     phistarAz1=LFTable(PhiStarCol,z1row)/**1e-4*/;
+	double MstarAz2=LFTable(MstarCol,z2row),alpAz2=LFTable(AlphaCol,z2row),
+	                                     phistarAz2=LFTable(PhiStarCol,z2row)/**1e-4*/;
+	double MstarAz3=LFTable(MstarCol,z3row),alpAz3=LFTable(AlphaCol,z3row),
+	                                     phistarAz3=LFTable(PhiStarCol,z3row)/**1e-4*/;
+	
+	// EARLY TYPES
+	double MstarEz1=LFTable(MstarCol+3,z1row),alpEz1=LFTable(AlphaCol+3,z1row),
+	                                      phistarEz1=LFTable(PhiStarCol+3,z1row)/**1e-4*/;
+	double MstarEz2=LFTable(MstarCol+3,z2row),alpEz2=LFTable(AlphaCol+3,z2row),
+	                                      phistarEz2=LFTable(PhiStarCol+3,z2row)/**1e-4*/;
+	double MstarEz3=LFTable(MstarCol+3,z3row),alpEz3=LFTable(AlphaCol+3,z3row),
+	                                     phistarEz3=LFTable(PhiStarCol+3,z3row)/**1e-4*/;
+	
+	// LATE TYPES
+	double MstarLz1=LFTable(MstarCol+6,z1row),alpLz1=LFTable(AlphaCol+6,z1row),
+	                                      phistarLz1=LFTable(PhiStarCol+6,z1row)/**1e-4*/;
+	double MstarLz2=LFTable(MstarCol+6,z2row),alpLz2=LFTable(AlphaCol+6,z2row),
+	                                      phistarLz2=LFTable(PhiStarCol+6,z2row)/**1e-4*/;
+	double MstarLz3=LFTable(MstarCol+6,z3row),alpLz3=LFTable(AlphaCol+6,z3row),
+	                                     phistarLz3=LFTable(PhiStarCol+6,z3row)/**1e-4*/;
+	
+	// STARBURST TYPES
+	double MstarSz1=LFTable(MstarCol+9,z1row),alpSz1=LFTable(AlphaCol+9,z1row),
+	                                      phistarSz1=LFTable(PhiStarCol+9,z1row)/**1e-4*/;
+	double MstarSz2=LFTable(MstarCol+9,z2row),alpSz2=LFTable(AlphaCol+9,z2row),
+	                                      phistarSz2=LFTable(PhiStarCol+9,z2row)/**1e-4*/;
+	double MstarSz3=LFTable(MstarCol+9,z3row),alpSz3=LFTable(AlphaCol+9,z3row),
+	                                     phistarSz3=LFTable(PhiStarCol+9,z3row)/**1e-4*/;
+	
+	/////////////////////////////////////////////////////////////////////////////////////
+
 
 	string MstarUnits="M-5log10h70";
 	string phistarUnits="(Mpc/h70)^-3";
@@ -498,18 +572,20 @@ int main(int narg, char* arg[]) {
 		// writing FT'd array to a FITS file
 		// now there shouldn't be a problem because of 
 		// doing .PackElements() in constructor
-		//TVector<r_8> gridv=m2g.ReturnGridSpec();
-		//TArray<r_8> massn;
-		//int ndim=3;
-		//sa_size_t mydim[ndim];
-		//mydim[0]=gridv(0); mydim[1]=gridv(1); mydim[2]=gridv(2);
-		//massn.SetSize(ndim, mydim);
-		//cout <<"    Size of mass array = "<<
-		//for(sa_size_t iz=0; iz<mass2.SizeZ(); iz++) 
-		//	for(sa_size_t iy=0; iy<mass2.SizeY(); iy++) 
-		//		for(sa_size_t ix=0; ix<mass2.SizeX(); ix++) 
-		//			massn(ix, iy, iz) = mass2(ix, iy, iz);
-		//cout <<" here2"<<endl;
+		// TVector<r_8> gridv=m2g.ReturnGridSpec();
+		// TArray<r_8> massn;
+		// int ndim=3;
+		// sa_size_t mydim[ndim];
+		// mydim[0]=gridv(0); mydim[1]=gridv(1); mydim[2]=gridv(2);
+		// massn.SetSize(ndim, mydim);
+		// cout <<"    Size of mass array = "<< mass2.SizeZ() << " " << mass2.SizeY()<< " " << mass2.SizeX()<<endl;
+		// for(sa_size_t iz=0; iz<mass2.SizeZ(); iz++) 
+		// 	for(sa_size_t iy=0; iy<mass2.SizeY(); iy++) 
+		// 		for(sa_size_t ix=0; ix<mass2.SizeX(); ix++) 
+		// 			massn(ix, iy, iz) = mass2(ix, iy, iz);
+		// cout <<" here2"<<endl;
+
+		// lignes ci-dessus decommentees
 		string outmass = debug_out +"_mass.fits";
 		FitsInOutFile fos1(outmass, FitsInOutFile ::Fits_Create);
 		fos1 << mass2;
@@ -567,6 +643,7 @@ int main(int narg, char* arg[]) {
 	switch (out_type) {
 	case 0:
 	  m2g.CreateGalCatalog(idsim,outfile,gfdz3,extinct,doVeryFaintCut,maxRadius,isZRadial);
+	  // /!\ CreateGalCatalog(...) has been modified by Adeline to write cosmo parameters in file header.
 	  break;
 	case 1:
 	  m2g.CreateSimpleCatalog(idsim, outfile, maxRadius);

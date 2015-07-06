@@ -1,3 +1,5 @@
+
+
 /**
  * @file  cat2grid.h
  * @brief grid a galaxy catalog for power spectrum analysis
@@ -102,11 +104,12 @@ public:
 	    @param ZOCol    name of column in galaxy catalog containing observed z
 	    @param ZSCol    name of column in galaxy catalog containing spec z
 	    @param RadialZ  if true sets the z-dimension to be radial direction 
-	    @param PZErr    size of Gaussian photo-z error 
+	    @param PZerrAxis    size of Gaussian photo-z error on Z axis
+	    @param PzerrReds    size of Gaussian photo-z error on redshift
 	    @param Print    if true prints extra to the screen                    */
 	Cat2Grid(SwFitsDataTable& dt, SimpleUniverse& su, RandomGenerator& rg,
 	         FitsInOutFile& fos, string ZOCol="zp", string ZSCol="z",
-	         bool RadialZ=false, double PZErr=0,bool Print=true);
+	         bool RadialZ=false, double PZerr=0,bool Print=true);
 	         
 	/** Constructor - Takes the interp z->d functions as arguments rather than
 	    calculating them every time so you can use the Row2Record, 
@@ -188,7 +191,7 @@ public:
 	    currently accepted                                                    */
 	bool Filter(GalRecord& rec); 
 	
-	/** Convert galaxy position in GalRecord (theta,phi,z) into Euclidean 
+	/** Convert galaxy position in GalRecord (phi,theta,z) into Euclidean 
 	    coordinates
 	    @param rec        galaxy record
 	    @param x          Euclidean x coordinate
@@ -242,6 +245,7 @@ public:
 		double normm=(double)n_obs_pixels_/ng_;
 		ngals_ *= normm;
 		double normw = (double)n_obs_pixels_/ngw_;
+		cout << "TEST "<< (double)n_obs_pixels_ << " " << (double)ngw_ <<  endl;
 		wngals_*= normw;
 		cout <<"     Normalising n-gals array by "<< normm <<endl;
 		cout <<"     Normalising weighted n-gals array by "<< normw <<endl; };
@@ -253,14 +257,31 @@ public:
 		wrgals_*= normr; 
 		VarianceRandomGrid(); };
 
-	/** Add Gaussian errors to redshifts 
+	/** Add Gaussian errors to z coordinate   */
+	void SetGaussErrAxis(double Err, double zref, bool randomseed) {
+	  AddGaussErr_    = true;
+	  AddGaussErrAxis_= true;
+	  ErrRandomSeed_  = randomseed;
+	  PZerr_ = Err; 
+	  PZDerr_ = ZErr2CoDistErr(su_,Err,zref);
+	  cout <<"    Gaussian errors WILL be added to z-coordinate from a reshift error of "<< PZerr_ ; 
+	  if (ErrRandomSeed_) cout << " in Montecarlo mode" << endl<<endl; 
+	  else cout << endl<<endl; 
+	};
+
+
+	/** Add Gaussian errors to redshifts  (Cecile)
 	    @param Err   redshift error size (Err*(1+z))                          */
-	void SetGaussErr(double Err) {
-		AddGaussErr_=true;
-		PZDerr_ = Err; 
-		if (AddGaussErr_)
-			cout <<"    Gaussian errors WILL be added to z-coordinate"<<endl<<endl; 
-		};
+	void SetGaussErrRedshift(double Err, double zref, bool seed) {
+	  AddGaussErr_    = true;
+	  AddGaussErrReds_= true;
+	  ErrRandomSeed_  = seed;
+	  PZerr_ = Err; 
+	  PZDerr_ = ZErr2CoDistErr(su_,Err,zref);
+	  cout <<"    Gaussian errors WILL be added to redshift "<< PZerr_   ; 
+	  if (ErrRandomSeed_) cout << " in Montecarlo mode" << endl<<endl; 
+	  else cout << endl<<endl; 
+	};
 		
 	/** Compute variance of random grid                                       */
 	void VarianceRandomGrid() {
@@ -442,19 +463,22 @@ protected:
 	SInterp1D dist2z_;		          /**< distance to redshift look up table   */
 	
 	bool DoDebug_;		  /**< true if debugging                              */
-	bool AddGaussErr_;    /**< true if adding Gaussian error to redshifts     */
+	bool AddGaussErr_;        /**< true if adding Gaussian error  */
+	bool AddGaussErrAxis_;    /**< true if adding Gaussian error to  z-coordinate axis  */
+	bool AddGaussErrReds_;    /**< true if adding Gaussian error to redshifts (Cecile)   */
+	bool ErrRandomSeed_ ;     /**< true if the seed for the error generation is new at each execution */
 	bool sfcompute_;	  /**< true if selection function has been set        */
 	bool RadialZ_;		  /**< if true z-dimension IS radial direction        */
 
 	FitsInOutFile& fos_; 	/**< FITS file containing gridded galaxy data     */
-	string debugoutroot_; 	/**< root file name to save things to when debugging */
+	string debugoutroot_;/**< root file name to save things to when debugging */
 	
-	double PZErr_;      /**< size of photo-z error                            */
-	double PZDerr_;		/**< size of photo-z error in comoving distance units */
+	double PZerr_;      /**< size of photo-z error along z-axis               */
+	double PZDerr_;	    /**< size of photo-z error in comoving distance units */
 	string ZOCol_;      /**< column name containing observed redshifts        */
-	string ZSCol_;		/**< column name containing spec redshifts            */
+	string ZSCol_;	    /**< column name containing spec redshifts            */
 	double volgrid_;    /**< volume of grid in Mpc^3                          */
-	double cellsize_;	/**< pixel size of grid in Mpc                        */
+	double cellsize_;   /**< pixel size of grid in Mpc                        */
 	r_4 Vol_;           /**< approx volume of galaxy catalog                  */
 	double SkyArea_;    /**< sky area: not clear on what this does?           */
 	double xmin_;       /**< min x-coord of galaxies                          */
@@ -474,11 +498,11 @@ protected:
 	sa_size_t Nx_;      /**< number of pixels of grid in x-dimension          */    
 	sa_size_t Ny_;      /**< number of pixels of grid in y-dimension          */ 
 	sa_size_t Nz_;      /**< number of pixels of grid in z-dimension          */ 
-	sa_size_t Npix_;	/**< total number of pixels in grid                   */ 
+	sa_size_t Npix_;    /**< total number of pixels in grid                   */ 
 	sa_size_t ngo_;     /**< observed number of gals in sim                   */
-	sa_size_t ngall_;	/**< total number of gals in sim                      */
+	sa_size_t ngall_;   /**< total number of gals in sim                      */
 	sa_size_t ng_;      /**< number of gals inside grid                       */
-	sa_size_t ngout_;	/**< number of gals outside grid                      */ 
+	sa_size_t ngout_;	/**< number of gals outside grid                  */ 
 	sa_size_t ngout2_;  /**< number of gals outside weighted grid             */
 	sa_size_t n_obs_pixels_; /**< number of pixels inside survey obs cone     */
 	r_8 ngw_;           /**< number of gals inside weighted grid              */
@@ -486,7 +510,7 @@ protected:
 	r_8 nrand_;         /**< number of gals in random grid                    */
 	int_8 idx_;         /**< index of center pixel in x-dimension             */
 	int_8 idy_;         /**< index of center pixel in y-dimension             */
-	int_8 idz_;	        /**< index of center pixel in z-dimension             */		  
+	int_8 idz_;	        /**< index of center pixel in z-dimension         */		  
 	double DCref_;      /**< comoving distance to center pixel                */
 	double zref_;	    /**< redshift of center pixel                         */  
 	vector<double> zs_; /**< selection function look up table                 */
@@ -494,8 +518,8 @@ protected:
 	vector<double> phi_;/**< selection function look up table                 */
 	vector<double> dc_; /**< selection function look up table                 */
 	double alph_;		/**< number of gals in weighted galaxy number grid/by weighted random number grid */
-	sa_size_t Ic1_;     /**< index of theta? column in data table             */
-	sa_size_t Ic2_;     /**< index of phi? column in data table               */
+	sa_size_t Ic1_;     /**< index of phi or x column in data table           */
+	sa_size_t Ic2_;     /**< index of theta or y column in data table         */
 	sa_size_t Izs_;     /**< index of spec-z column in data table             */
 	sa_size_t Iz_;      /**< index of obs-z column in data table              */
 	sa_size_t Iid_;     /**< index of gal id column in data table             */
@@ -504,7 +528,7 @@ protected:
 	sa_size_t Iri_;     /**< index of r-i color column in data table          */
 	sa_size_t Iiz_;     /**< index of i-z color column in data table          */
 	sa_size_t Izy_;     /**< index of z-y color column in data tabl           */    
-	int prtlev_;		/**< print level set                                  */
+	int prtlev_;	    /**< print level set                                  */
 	//double phistar_,Mstar_,alpha_,mlim_,Mc_; // parameters for selection function ???REDUNDANT???
 	double mean_overdensity_; /**< mean over-density of simlss grid AFTER setting cells with <-1 to =-1 */
 	

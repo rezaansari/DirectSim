@@ -61,16 +61,22 @@ int main(int narg,char *arg[])
     //-----------------------------------------------------------------
     // *** Survey definition
     long nx=360, ny=-1, nz=64; double dx=1., dy=-1., dz=-1.;
+    double zref = 0.5;
 
     // *** Cosmography definition   (WMAP)
     //unsigned short flat = 0;
-    double ob0 = 0.0444356;
-    double h100=0.71, om0=0.267804, or0=7.9e-05, ol0=0.73,w0=-1.;
-    double zref = 0.5;
+    //    double ob0 = 0.0444356;
+    //    double h100=0.71, om0=0.267804, or0=7.9e-05, ol0=0.73,w0=-1.;
+    //    double ns = 1., as = 1.;
     //double perc=0.01,dzinc=-1.,dzmax=-1.; unsigned short glorder=4;
 
+    // *** Cosmography definition   (Planck 2015)
+    //unsigned short flat = 0;
+    double ob0 = 0.0484;
+    double h100=0.678, om0=0.308, or0=7.9e-05, ol0=0.692,w0=-1.;
+    double ns = 0.9677, as = 1.;
+
     // *** Spectrum and variance definition
-    double ns = 1., as = 1.;
     double R=8./h100, Rg=R/sqrt(5.);
     double sigmaR = 1.;
     
@@ -93,7 +99,7 @@ int main(int narg,char *arg[])
     // bool compvarreal = false;
     //unsigned short whattowrt[5] = {1,1,1,1,1};
     unsigned short whattowrt[2] = {1,1};
-    string rootnameout = " simdensity";
+    string rootnameout = " simdensityPl";
 
     unsigned long ntnent = 10000;  // 0 = do not fill NTuple
 

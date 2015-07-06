@@ -3,7 +3,6 @@
   * @brief Given an input power spectrum + errors fit the BAO scale to "wiggles only"
   *        power spectrum
   *
-  * @todo read cosmology from file header
   *
   * @author Alex Abate
   * Contact: abate@email.arizona.edu
@@ -70,9 +69,9 @@ void usage(void) {
 	
 	cout << " -P : PSFile: power spectrum file to read in               "<<endl;
 	cout << "              (3 columns: k (Mpc^-1), P(k) Mpc^3, err)     "<<endl;
+	cout << " -U : cosmogical model read from grid file                 "<<endl;
 	cout << " -O : outfile_root: file root name to write results to     "<<endl; 
-	cout << " -z : zref: redshift of power spectrum                     "<<endl;
-	cout << " -c : sigma8,n: sigma8 and spectral index                  "<<endl;
+	cout << " -s : if input file is simulation (no shotnoise, no sigma) "<<endl; 
 	cout << endl;
 }
 
@@ -84,29 +83,31 @@ int main(int narg, char *arg[]) {
 	FitsIOServerInit();
   
 	// input power spectrum
-	string ps_file;
+	string ps_file, cosmo_file, ref_file;
 	// output file
 	string outfile_root;
-	double zref;
-	// cosmology
-	double n=1, sig8 = 0.8;
 	double maxk = 1;
+	double Sigma8, n_s;
+	bool simu_mode = false;
 
 	//--- decoding command line arguments 
 	char c;
-	while ((c = getopt(narg,arg,"hP:O:z:d:c:")) != -1) {
+	while ((c = getopt(narg,arg,"hsP:U:R:O:d")) != -1) {
 	    switch (c) {
 		    case 'P' :
 			    ps_file = optarg;
 			    break;
+		    case 'U' :
+			    cosmo_file = optarg;
+			    break;
+		    case 'R' :
+			    ref_file = optarg;
+			    break;
 		    case 'O' :
 			    outfile_root = optarg;
 			    break;
-		    case 'z' :
-			    sscanf(optarg,"%lf",&zref);
-			    break;
-		    case 'c' :
-			    sscanf(optarg,"%lf,%lf",&sig8,&n);
+		    case 's' :
+			    simu_mode = true;
 			    break;
 		    case 'h' :
 		        default :
@@ -116,7 +117,9 @@ int main(int narg, char *arg[]) {
 	
 	
 	cout << "     Printing command line arguments ... "<<endl<<endl;
-	cout << "     Reading in observed power spectrum from :"<< ps_file <<endl;
+	cout << "     Reading in observed power spectrum from: "<< ps_file <<endl;
+	cout << "     Reading cosmological parameters from: "<< cosmo_file <<endl;
+	if (simu_mode) cout << " Will read shot noise and sigmaP from the input power spectrum file" << endl;
 	cout << "     Saving results to files beginning "<< outfile_root <<endl;
 	cout <<endl;
 	
@@ -131,24 +134,59 @@ int main(int narg, char *arg[]) {
 	power_spectrum.ReadASCII(ifs,nr,nc);
 	cout << power_spectrum ;
 
-
-	// Initalise SimLSS cosmology
+	// Set cosmology 
 	cout << "     Initialise cosmology:"<<endl;
-	double h = 0.71, OmegaM = 0.267804, OmegaL = 0.73, R = 8;
-	SimpleUniverse su(h, OmegaM, OmegaL);
-	su.SetFlatUniverse_OmegaMatter();
-	double OmegaB = su.OmegaBaryon();
-	cout << "     OmegaK="<< su.OmegaCurv() <<", OmegaM="<< su.OmegaMatter();
-	cout << ", OmegaL="<< OmegaL <<", OmegaB="<< OmegaB <<", H0="<< su.H0() <<endl;
-	cout << endl;
-	
+	FitsInOutFile fin(cosmo_file, FitsInOutFile::Fits_RO);   
+	fin.MoveAbsToHDU(4);// assuming cosmo from cat_grid
 
+	//Modif Adeline : read cosmo parameters in file header
+	string H0_s, OmegaM_s, OmegaL_s, OmegaB_s, OmegaR_s, wDE_s, wDA_s, Sigma8_s, Ns_s;
+	double h, OmegaM, OmegaL, OmegaB, OmegaR, wDE, wDA; // Sigma8 et n_s defined before as they can be given as parameters
+	H0_s = fin.KeyValue("H0");
+	OmegaM_s = fin.KeyValue("OMEGAM0");
+	OmegaL_s = fin.KeyValue("OMEGADE0");
+	OmegaB_s = fin.KeyValue("OMEGAB0");
+	OmegaR_s = fin.KeyValue("OMEGAR0");
+	wDE_s = fin.KeyValue("DE_W0");
+	wDA_s = fin.KeyValue("DE_WA");
+	Sigma8_s = fin.KeyValue("SIGMA8");
+	Ns_s = fin.KeyValue("N_S");
+	
+	h = atof(H0_s.c_str()) / 100;
+	OmegaM = atof(OmegaM_s.c_str());
+	OmegaL = atof(OmegaL_s.c_str());
+	OmegaB = atof(OmegaB_s.c_str());
+	OmegaR = atof(OmegaR_s.c_str());
+	wDE = atof(wDE_s.c_str());
+	wDA = atof(wDA_s.c_str());
+	Sigma8 = atof(Sigma8_s.c_str());	
+	n_s = atof(Ns_s.c_str());
+
+	SimpleUniverse su(h, OmegaM, OmegaL);
+	su.SetOmegaBaryon(OmegaB);
+	su.SetOmegaRadiation(OmegaR);
+	su.SetSigma8(Sigma8);
+	su.SetSpectralIndex(n_s);
+	su.SetFlatUniverse_OmegaLambda(); // Cecile modif - to be sure that it is flat by adjusting OmegaLambda
+	cout << "     OmegaK="<< su.OmegaCurv() <<", OmegaM="<< su.OmegaMatter();
+	cout << ", OmegaL="<< su.OmegaLambda() <<", OmegaB="<< su.OmegaBaryon();
+	cout << ", Omega_rad=" << su.OmegaRadiation() << ", Omega_cdm=" << su.OmegaCDM() <<", H0="<< su.H0() << endl;
+	cout << "check flatness: OmegaTot=" << su.OmegaTotal() << endl;
+	if (wDE != -1 or wDA !=0)  
+	  su.SetDarkEnergy(su.OmegaLambda(),wDE,wDA);
+	
+	cout << " and w0=" << su.wDE() << ", wA=" << su.waDE() << ", sigma8=" << su.Sigma8() << endl;
+	cout << "Spectral index=" << su.Ns() << endl;
+	cout << "Previous values are inputs of the simulation" << endl;
+	cout << "____________________________________________" << endl << endl;
+	
 	// Initialise FitBAOScale
 	cout << "     Compute chisq:"<<endl;
-	FitBAOScale fitbao(power_spectrum, su, zref, sig8, n);
+	double zref = atof(fin.KeyValue("ZREF").c_str()); 
+	FitBAOScale fitbao(power_spectrum, su, zref, ref_file, simu_mode);
 	fitbao.ComputeChisq(maxk);
-	
 
+	
 	// Find best fit scale and 1-sig error
 	cout << "     Find best-fit scale and 1-sig error:"<<endl;
 	double bestfit, siglow, sighigh;

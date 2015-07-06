@@ -1,27 +1,48 @@
 #include "fitkbaoscale.h"
 
-FitBAOScale::FitBAOScale(TArray<r_8> pspectrum, SimpleUniverse& su, double zref,
-                                                          double sig8, double n)
-: su_(su) , zref_(zref)
+FitBAOScale::FitBAOScale(TArray<r_8> pspectrum, SimpleUniverse& su, double zref, string ref_file, bool simu_mode)
+  :su_(su),  zref_(zref), simu_mode_(simu_mode)
 {
 
 	// fill power spectrum vectors
 	InitVect(pspectrum);
 
-	// Smooth power spectrum
+	// Cosmological parameters
  	double OmegaM=su_.OmegaMatter();
 	double OmegaB=su_.OmegaBaryon();
 	double OmegaL=su_.OmegaLambda();
+	double sig8=su_.Sigma8();
+	double n=su_.Ns();
 	double R=8; // sigma8 definition
 	h_=su_.h();
 	cout << "     h = "<< h_ <<endl;
-	ComputeSmoothPS(OmegaM, OmegaL, OmegaB, h_, sig8, n, R);
+	//	ComputeSmoothPS(OmegaM, OmegaL, OmegaB, h_, sig8, n, R);
+	 
+	// Cecile - replace new computation by reading the theoretical spectrum without oscillations
+	// read computed power spectrum without oscillations
+	ifstream ifs(ref_file.c_str());
+	TArray<r_8> SpecTheo;
+	sa_size_t nr, nc;
+	SpecTheo.ReadASCII(ifs,nr,nc);
+	vector<double> kvals,pvals;
+	int icolk=0,icolp=2;
+	for(int kk=0; kk<nr; kk++) {
+	  double kv=SpecTheo(icolk,kk);
+	  kvals.push_back(kv);
+	  double pv=SpecTheo(icolp,kk);
+	  pvals.push_back(pv);
+	}
+
+	// interpolate this spectrum at kobs values
+	SLinInterp1D interpYR(kvals[0], kvals[nr-1],pvals);
+	for (int i=0; i<kobs_.Size(); i++) Pref_(i) = interpYR(kobs_(i));
 
 	// Compute Pobs/Pref
 	Pratio();
 	
 	// set default ka range
-	minka_=0.03; maxka_=0.05; nka_=1000;
+	minka_=0.03; maxka_=0.07; nka_=1000;
+	//	minka_=0.03; maxka_=0.10; nka_=1000; // Cecile
 
 	bestfit_=-10; // uninitialised
 };
@@ -37,17 +58,21 @@ void FitBAOScale::InitVect(TArray<r_8> pspectrum)
 	Pref_.SetSize(nk);
 	Pratio_.SetSize(nk);
 
+	// col 1 = total spectrum, col 6 = shot noise spectrum, col 7 = sigma (computed from (total - shot noise) spectrum (Cecile)
 	for (int i=0; i<nk; i++) {
-		kobs_(i) = pspectrum(0,i);
-		Pobs_(i) = pspectrum(1,i);
-		sig_(i) = pspectrum(2,i);
-		//if (i<100)
-		//	cout <<	kobs_(i) << "    "<<Pobs_(i) << "    "<<sig_(i) <<endl;
-		}
-	
+	  kobs_(i) = pspectrum(0,i);
+	  if (simu_mode_) {
+	    Pobs_(i) = pspectrum(1,i);
+	    sig_(i)  = 1.;
+	  } else {
+	    Pobs_(i) = pspectrum(1,i) - pspectrum(6,i);
+	    sig_(i)  = pspectrum(7,i);
+	  }
+	  //	  if (i<100) cout <<	kobs_(i) << "    "<<Pobs_(i) << "    "<< sig_(i) <<endl;
+	}
 };
 
-
+/*
 // Calculate SMOOTH fiducial power spectrum
 void FitBAOScale::ComputeSmoothPS(double OmegaM, double OmegaL, double OmegaB, 
                                       double h, double sig8, double n, double R)
@@ -56,7 +81,8 @@ void FitBAOScale::ComputeSmoothPS(double OmegaM, double OmegaL, double OmegaB,
 	cout << "     Computing smooth fiducial power spectrum ..."<<endl;
 	InitialPowerLaw Pkinit(n);
 	TransferEH tf(h,OmegaM-OmegaB,OmegaB,T_CMB_K,false);
-	tf.SetNoOscEnv(1); // want smooth power spectrum
+	//	tf.SetNoOscEnv(1); // want smooth power spectrum
+	tf.SetNoOscEnv(2); // want smooth power spectrum Cecile, to do like cmvginit3d
 	GrowthEH growth(OmegaM, OmegaL);
  	double growth_at_z = growth(zref_);
  	cout << "     Growth factor at z="<< zref_ <<" = "<< growth_at_z <<endl;
@@ -106,9 +132,8 @@ void FitBAOScale::ComputeSmoothPS(double OmegaM, double OmegaL, double OmegaB,
 
 	for (int i=0; i<kobs_.Size(); i++)
 		Pref_(i) = pkz(kobs_(i));
-
 };
-
+*/
 
 // Compute the chi-square as a function of ka
 void FitBAOScale::ComputeChisq(double maxk)
@@ -133,29 +158,29 @@ void FitBAOScale::ComputeChisq(double maxk)
 	decs.PrintParas();
 
 	for (int ika=0; ika<nka_; ika++) {
-		double chisq=0;
-	    kavals_(ika) = minka_ + ika*dka;
-	 
-		for (int ik=0; ik<kobs_.Size(); ik++) {
-			
-			// decaying sinusoid at ka 
-			double pred = decs(kobs_(ik),kavals_(ika));
-			double diff= Pratio_(ik)-pred;
-			
-			if (sig_(ik)==0)
-				throw ParmError("Error is zero!");
-
+	  double chisq=0;
+	  kavals_(ika) = minka_ + ika*dka;
+	  
+	  for (int ik=0; ik<kobs_.Size(); ik++) {
+	    
+	    // decaying sinusoid at ka 
+	    double pred = decs(kobs_(ik),kavals_(ika));
+	    double diff= Pratio_(ik)-pred;
+	    
+	    if (sig_(ik)==0)
+	      throw ParmError("Error is zero!");
+	    
             // only use power spectra values below some max k
-			if (kobs_(ik)<maxk)
-				chisq += diff*diff/(sig_(ik)*sig_(ik));
-				
-			//if (isnan(pow(diff,2.)/(sig_(ik)*sig_(ik))))
-				//cout << "sig_(ik)="<<sig_(ik)<<", Pref^o="<<Pratio_(ika)<<", Pref^p="<<pred<<endl;
-			}
-	
-		Chisq_(ika) = chisq;
-		}
-
+	    if (kobs_(ik)<maxk)
+	      chisq += diff*diff/(sig_(ik)*sig_(ik));
+	    
+	    //if (isnan(pow(diff,2.)/(sig_(ik)*sig_(ik))))
+	    //cout << "sig_(ik)="<<sig_(ik)<<", Pref^o="<<Pratio_(ika)<<", Pref^p="<<pred<<endl;
+	  }
+	  
+	  Chisq_(ika) = chisq;
+	  //  cout << chisq << endl;
+	}
 };
 
 
@@ -177,7 +202,7 @@ void FitBAOScale::WriteChisq(string outfile)
 		
 		outp << "Redshift of power spectrum = "<< zref_ <<", best fit ka = ";
 		outp << bestfit_ <<", "<< nsig_ <<"-sigma errors: + "<< errup_;
-		outp <<" - "<< errdown_ <<endl;
+		outp <<" - "<< errdown_ << " with h = " << h_ << endl;
 		
 		for (int i=0;i<Chisq_.Size();i++)// loop over ka values
 			outp << kavals_(i) << "   "<< Chisq_(i)<< endl;
@@ -246,10 +271,10 @@ void FitBAOScale::WriteResults(string outfile)
 		cout << bestfit_ <<", "<< nsig_ <<"-sigma errors: + "<< errup_ <<" - ";
 		cout << errdown_ <<endl;
 		
-		outp << "z_ps : best fit ka : n-sigma of errors : +error : -error "<<endl;
+		outp << "z_ps : best fit ka : n-sigma of errors : +error : -error : hubble parameter h"<<endl;
 		
 		outp << zref_ <<"   "<< bestfit_ <<"   "<< nsig_ <<"   "<< errup_;
-		outp <<"   "<< errdown_ <<endl;
+		outp <<"   "<< errdown_ << "   " << h_ << endl;
 		
 		outp.close();
 		} // end of write
