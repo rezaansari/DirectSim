@@ -10,7 +10,7 @@
 //******* Constructors *******************************************************//
 
 Mass2Gal::Mass2Gal(TArray<r_8> drho,  SimpleUniverse& su, RandomGeneratorInterface& rg, int nbadplanes) 
-: su_(su) , rg_(rg)
+  : su_(su) , rg_(rg)
 // Reads in SimLSS output which is a 3D cube of delta values
 // NOTE: SimLSS outputs cube so:
 // AXIS 1 = Z (RADIAL) AXIS
@@ -396,99 +396,100 @@ sa_size_t Mass2Gal::CreateGalCatalog(int idsim, string fitsname, GalFlxTypDist& 
 	cout <<  " Mass2Gal::CreateGalCatalog  start looping over cube cells NCells= " << ngals_.Size() << " NGals=" << ng_ << " ... "<<endl;
 	uint_8 ngsum=0;  // counter for checking  
 	uint_8 nginfile=0,nginzfile=0;  // count of galaxies going into file, total gals simulated
-
+	
 	size_t totcellcnt=ngals_.SizeX()*ngals_.SizeY()*ngals_.SizeZ();
 	size_t cellcnt=0;
 	ProgressBar pgb(totcellcnt, ProgBarM_Time);
-	for(sa_size_t iz=0; iz<ngals_.SizeZ(); iz++)// Z direction (~redshift direction)
+	for(sa_size_t iz=0; iz<ngals_.SizeZ(); iz++)// Z direction (redshift or z-axis direction)
 	  for(sa_size_t iy=0; iy<ngals_.SizeY(); iy++) { // Y direction (transverse plane)
             for(sa_size_t ix=0; ix<ngals_.SizeX(); ix++) {// X direction (transverse plane) 
-		  
-		        // pick a cell
-		        int_8 ng=ngals_(ix,iy,iz); // num galaxies in this cell
-		        // comoving distance to center of cell:
-		        double xc, yc, zc, dc;
-		        GetCellCoord(ix,iy,iz, xc, yc, zc); // given pixel indices (ix,iy,iz) get comoving coords
-		        double rx,ry,rz,rr,rphi,rtet,rreds;// note names phi,theta follow the usual spehric. coord convention 
-		        double mag,gtype,gext;  // galaxy absolute magnitude and type and internal extinction
-		        dc = sqrt(xc*xc+yc*yc+zc*zc);// comoving distance to each pixel center
-
-                for(int ing=0; ing<ng; ing++) { // from gal 1 to gal n in cell...
-			        if(RandPos_) {
-				        // We generate random positions with flat distribution inside the cell
-				        rx = xc+rg_.Flatpm1()*(Dx_/2);
-				        ry = yc+rg_.Flatpm1()*(Dy_/2);
-				        rz = zc+rg_.Flatpm1()*(Dz_/2);
-				        }
-			        else {
-				        // Or we use cell center position
-				        rx = xc;
-				        ry = yc;
-				        rz = zc;
-				        }
-				
-			    if (ZisRad)
-				    Conv2ParaCoord(rz,rr);
-			    else
-				    Conv2SphCoord(rx,ry,rz,rr,rphi,rtet); 
-			
-			    // convert comoving distance into a redshift
-			    rreds = dist2Redshift(rr);
-			
-			    // draw the galaxy properties
-			    mag = DrawMagType(gfd, gtype);
-			    gext=0.;// extinction is set to 0 for now
-			    ngsum++;// should be same as ng_
-			
-			    double mAM =  maxAM(rreds); // given redshift of galaxy what's max (faintest) absolute mag possible
-			    if((mag<mAM) && (rtet<SkyArea)) { // magnitude cut and sky area selection - theta is co-tangent wrt z-axis
-			      
-			      // object id, gal id starts at 1 not 0
-			      seq++; // adding up TOTAL number of gals put into file
-			      gid = gid0+seq;
-			      
-			      row[0] = gid;
-			      row[1] = rx; 
-			      row[2] = ry; 
-			      row[3] = rreds; 
-			      row[4] = gtype; 
-			      row[5] = mag; 
-			      //row[5] = nginfile;
-			      //row[5] = gext;
-			      //row[7] = creds;
-			      
-			      if (ZisRad) {
-				row[1] = rx; 
-				row[2] = ry; 
-			      }
-			      else {
-				row[1] = rphi; 
-				row[2] = rtet; 
-			      }
-			      
-			      gals.AddRow(row);
-			      nginfile++;
-			    }
-			    
-			    if(rtet<SkyArea) 
-			      nginzfile++; // counts ALL in sim
-			    
-			    //For the ZONLY file (only if doing magnitude cut)
-			    if( rtet<SkyArea&&AMcut ) { // JUST sky area selection
-			      
-			      // object id, gal id starts at 1 not 0
-			      seq2++; // adding up TOTAL number of gals put into file
-			      gid = gid0+seq2;
-			      
-			      row2[0] = gid;
-			      row2[1] = rreds; 
-			      
-			      gals2.AddRow(row2);
-			      nginzfile++; // adding number of gals in file
-			    }
-			    
-		}  // end of loop over galaxies in the cell 
+	      
+	      // pick a cell
+	      int_8 ng=ngals_(ix,iy,iz); // num galaxies in this cell
+	      // comoving distance to center of cell:
+	      double xc, yc, zc;
+	      GetCellCoord(ix,iy,iz, xc, yc, zc); // given pixel indices (ix,iy,iz) get comoving coords
+	      double rx,ry,rz,rr,rphi,rtet,rreds;// note names phi,theta follow the usual spehric. coord convention 
+	      double mag,gtype,gext;  // galaxy absolute magnitude and type and internal extinction
+	      // dc = sqrt(xc*xc+yc*yc+zc*zc);// comoving distance to each pixel center Cecile - useless here and wrong is cae of z-radial
+	      rtet = -1; //Cecile - caution, no SkyArea cut is z is radial
+	      
+	      for(int ing=0; ing<ng; ing++) { // from gal 1 to gal n in cell...
+		if(RandPos_) {
+		  // We generate random positions with flat distribution inside the cell
+		  rx = xc+rg_.Flatpm1()*(Dx_/2);
+		  ry = yc+rg_.Flatpm1()*(Dy_/2);
+		  rz = zc+rg_.Flatpm1()*(Dz_/2);
+		}
+		else {
+		  // Or we use cell center position
+		  rx = xc;
+		  ry = yc;
+		  rz = zc;
+		}
 		
+		if (ZisRad)
+		  Conv2ParaCoord(rz,rr);
+		else
+		  Conv2SphCoord(rx,ry,rz,rr,rphi,rtet); 
+		
+		// convert comoving distance into a redshift
+		rreds = dist2Redshift(rr);
+		
+		// draw the galaxy properties
+		mag = DrawMagType(gfd, gtype);
+		gext=0.;// extinction is set to 0 for now
+		ngsum++;// should be same as ng_
+		
+		double mAM =  maxAM(rreds); // given redshift of galaxy what's max (faintest) absolute mag possible
+		if((mag<mAM) && (rtet<SkyArea)) { // magnitude cut and sky area selection - theta is co-tangent wrt z-axis
+		  
+		  // object id, gal id starts at 1 not 0
+		  seq++; // adding up TOTAL number of gals put into file
+		  gid = gid0+seq;
+		  
+		  row[0] = gid;
+		  // row[1] = rx;  // filled just after
+		  // row[2] = ry;  // filled just after
+		  row[3] = rreds; 
+		  row[4] = gtype; 
+		  row[5] = mag; 
+		  //row[5] = nginfile;
+		  //row[5] = gext;
+		  //row[7] = creds;
+		  
+		  if (ZisRad) {
+		    row[1] = rx; 
+		    row[2] = ry; 
+		  }
+		  else {
+		    row[1] = rphi; 
+		    row[2] = rtet; 
+		  }
+		  
+		  gals.AddRow(row);
+		  nginfile++;
+		}
+		
+		if(rtet<SkyArea) 
+		  nginzfile++; // counts ALL in sim
+		
+		//For the ZONLY file (only if doing magnitude cut)
+		if( rtet<SkyArea&&AMcut ) { // JUST sky area selection
+		  
+		  // object id, gal id starts at 1 not 0
+		  seq2++; // adding up TOTAL number of gals put into file
+		  gid = gid0+seq2;
+		  
+		  row2[0] = gid;
+		  row2[1] = rreds; 
+		  
+		  gals2.AddRow(row2);
+		  nginzfile++; // adding number of gals in file
+		}
+		
+	      }  // end of loop over galaxies in the cell 
+	      
 	    } // end of loop over ix (cells) 
 	    // ---- progress print 
 	    cellcnt+=ngals_.SizeX();
