@@ -60,7 +60,7 @@ public:
     /** Print galaxy properties */
 	void Print()
 		{ cout <<"Printing GalRecord: ";
-		  cout <<"alpha="<< alpha <<", delta="<< delta <<", zs="<< zs <<", zo="<< zo;}
+		  cout <<"alpha="<< alpha <<", delta="<< delta <<", x="<< xcoo <<", y="<< ycoo <<", zs="<< zs <<", zo="<< zo;}
 
 	double alpha;    /**< right ascension coodinate                           */
 	double delta;    /**< declination coodinate                               */
@@ -109,7 +109,7 @@ public:
 	    @param Print    if true prints extra to the screen                    */
 	Cat2Grid(SwFitsDataTable& dt, SimpleUniverse& su, RandomGenerator& rg,
 	         FitsInOutFile& fos, string ZOCol="zp", string ZSCol="z",
-	         bool RadialZ=false, double PZerr=0,bool Print=true);
+	         bool RadialZ=false, double PZerr=0,bool Print=true, string ObsCat="");
 	         
 	/** Constructor - Takes the interp z->d functions as arguments rather than
 	    calculating them every time so you can use the Row2Record, 
@@ -169,7 +169,7 @@ public:
 	                         if >1 file to read files are named FullCat_#ofn.fits
 	    @param ZCol          name of column in FullCat containing true z
 	    @param Nfiles        number of files n to read in  */
-	void SaveSelecFunc(string SFTextFile, string FullCat, string ZCol="z");
+	void SaveSelecFunc(string SFTextFile, string FullCat, string ObsCat, string ZFCol="zs", string  ZSCol="zs",  string ZOCol="zp");
 	
 	/** Set selection function                                                */
 	inline void SetSelectionFunction(SelectionFunctionInterface& sf) { 
@@ -531,6 +531,7 @@ protected:
 	int prtlev_;	    /**< print level set                                  */
 	//double phistar_,Mstar_,alpha_,mlim_,Mc_; // parameters for selection function ???REDUNDANT???
 	double mean_overdensity_; /**< mean over-density of simlss grid AFTER setting cells with <-1 to =-1 */
+	string ObsCat_;     /**< optionnal, list of catalog files, useful if more than 1 catalog must be read */
 	
 	TArray<r_8> ngals_;     /**< number of gals in each grid pixel, not corrected for SF */
 	TArray<r_8> wngals_;	/**< weighted number of gals in each grid pixel    */
