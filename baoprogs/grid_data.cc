@@ -132,11 +132,11 @@ void usage(void) {
 	cout << " -E : Error : Add a Gaussian error on z-axis of            "<<endl;
 	cout << "      sigma = E(1+redshift) (properly translated in Mpc)   "<<endl;
 	cout << " -e : Error : Add a Gaussian error on redshift of          "<<endl;
-	cout << "      sigma = E(1+redshift) (properly translated in Mpc)   "<<endl;
+	cout << "      sigma = e*(1+redshift)                               "<<endl;
 	cout << " -S : Error : random seed, must be set for simulations     "<<endl;
 	cout << " -r : isZRadial: z-dimension of catalog IS radial direction"<<endl;
 	cout << " -P : Nx,Ny,Nz,zref,Res : Number of pixels, redshift of    "<<endl;
-	cout << "      central pixel, pixel size - to specify how to grid   "<<endl;
+	cout << "      central pixel OR comobile distance of central pixel, pixel size - to specify how to grid   "<<endl;
 	cout << " -z : ZOCol,ZSCol: read OBSERVED redshifts from column named"<<endl;
 	cout << "      ZOCol, SPECTRO redshifts from column named ZSCol      "<<endl;
 	cout << " -m : nc : Mean density of random grid                      "<<endl;
@@ -306,10 +306,11 @@ int main(int narg, char* arg[]) {
 	cout <<endl;
 		
 	// GRID STUFF
+	
 	cout << "     *GRID DETAILS*"<<endl;
 	cout << "     Full grid defined by ...."<<endl;
 	cout << "     pixels : Nx,Ny,Nz = "<< Nx <<","<< Ny <<","<< Nz;
-	cout << ", of size "<< R <<" Mpc, centered at z="<< zref <<endl;
+	cout << ", of size "<< R <<" Mpc, centered at z (Mpc or redshift)="<< zref <<endl;
 	cout << "     Mean density of random grid = "<< nc <<endl;
 	cout << endl;
 	
@@ -335,7 +336,11 @@ int main(int narg, char* arg[]) {
 	
     // Read in galaxy catalog
 	cout <<"0/ Read in file "<< input_catalog <<endl;
-	FitsInOutFile fin(input_catalog, FitsInOutFile::Fits_RO);
+	string delim=",";
+	vector<string> input_list;
+	stringSplit(input_catalog,delim,input_list);
+
+	FitsInOutFile fin(input_list[0], FitsInOutFile::Fits_RO);
 	fin.MoveAbsToHDU(2);
 	SwFitsDataTable galaxy_catalog(fin, 512, false);
 	cout <<endl;
@@ -391,6 +396,14 @@ int main(int narg, char* arg[]) {
 	cout << " and w0=" << su.wDE() << ", wA=" << su.waDE() << ", sigma8=" << su.Sigma8() << endl;
 	cout << "Spectral index=" << su.Ns() << endl;
 	cout << endl;
+
+	if (zref > 10.) {
+	  cout << "Position of central provided in comoving distance, not in redshift: "<<zref;
+	  double dref = zref;
+	  zref = su.RedshiftFrLOS( dref, 6);
+	  cout << "Mpc converted to redshift of "<<  zref <<endl;
+	}
+
 	
 	// Initialize grid data class
 	RandomGenerator rg; // need this for cat2grid
@@ -403,7 +416,7 @@ int main(int narg, char* arg[]) {
 	  rg.SetSeed(seed);
 	}
 
-	Cat2Grid cat(galaxy_catalog, su, rg, fos, ZOCol, ZSCol, isZRadial);
+	Cat2Grid cat(galaxy_catalog, su, rg, fos, ZOCol, ZSCol, isZRadial, 0, true, input_catalog);
 	if (DoDebug)
 		cat.SetDebugOutroot(debug_out);
 	cout << "    The number of gals in whole simulation is "<< cat.ReturnNgAll() <<endl;
@@ -419,7 +432,7 @@ int main(int narg, char* arg[]) {
 	  maxdL = cat.FindMinMaxCoords();
 	  cout << "    Maximum luminosity distance = "<< maxdL <<endl;
 	} else cout << "Nothing to do : grid provided"  <<endl;
-	
+
 	res.Update();
 	cout << " Computed FindMinMaxCoords()"<<endl;
 	cout << " Memory size (KB):" << res.getMemorySize() << endl;
@@ -456,8 +469,8 @@ int main(int narg, char* arg[]) {
 		
 		if (doSFCompute) {
 		    // both spec-z and phot-z sf's are computed here
-		    cat.SaveSelecFunc(sf_file_root, all_z_file);
-		    // WARNING! there will be a problem if the z column in the all_z_file is not labeled "z"
+		  cat.SaveSelecFunc(sf_file_root, all_z_file, input_catalog, ZSCol, ZSCol, ZOCol);
+		    // WARNING! spectro redshift is assumed to be the name in the full catalog
             }
         else {
 		    ifstream inp;
@@ -488,7 +501,7 @@ int main(int narg, char* arg[]) {
 	cout<<endl<<endl;
 	
 	
-	// If debugging just output something here not sure what or why
+	// If debugging just output something here not sure what or why - Warning does not adapted to multiple input files
 	if (DoDebug) {
 		cat.OutputEuclidCat(SkyArea);
 	    }
