@@ -83,8 +83,9 @@ public:
 	    @param tol_corr  maximum value can to divide power spectrum by 
 	                     (else numerically unstable)
 	    @param snoise    shot noise: not implemented currently                */
+	    //modif Adeline : add  hnode_ and hkeepMode_ 
 	double AccumulatePowerSpectra(HProf& hp, bool pixcor=true, double maxk=1000,
-	     double Err=0, bool undamp=true, double tol_corr=0.15, double snoise=0); 
+	     double Err=0, bool undamp=true, double tol_corr=0.15, Histo* hnode_=NULL, Histo* hkeepMode_=NULL, double snoise=0); 
 	
 	/** Convolve Fourier transformed grid with a 1D Gaussian in z-dimension 
 	    direction. @warning may not work or be useful
@@ -115,9 +116,12 @@ public:
 	    @param Psim        power spectrum estimated from simulation wo/distortion
 	    @param Psimf       power spectrum estimated from simulation w/distortion
 	    @param volSim      volume of simulation
-	    @param meandens    mean density of simulation with distortion         */
+	    @param Pdata_noise shot noise (modif Cecile)	
+	    @param meandens    mean density of simulation with distortion         
+	    @param nGalGrid    number of galaxies in weight gride (modif Adeline)	
+	**/
 	void WritePS(string fname, HProf& Pdata, r_4 Voldata, HProf& PSimlss, 
-	                         HProf& PSimlssf, r_4 Volsimlss, double meandens=0); 
+	                         HProf& PSimlssf, r_4 Volsimlss, HProf& Pdata_noise,  double meandens = 0., double nGalGrid=0, Histo* hnode_ = NULL, Histo* hkeepMode_ = NULL); 
 	
 	/** Write power spectra to a file. Columns written to the file are (1) k-values, 
 	    (2) estimated P(k), (3) raw estimated P(k), (4) raw P(k), (5) simulation P(k),
@@ -190,6 +194,7 @@ public:
 
 	void BlowUpCheck();
 
+
 protected:
 	TArray<r_8> drho_;	            /**< galaxy fluctuation grid              */
 	TArray<r_8> drhoconv_;	        /**< galaxy fluctuation grid convolved with 1D Gaussian  */
@@ -216,6 +221,7 @@ protected:
 	double Err_;         /**< photo-z error                                   */
 	double tol_corr_;    /** tolerance on undamping correction                */
 	bool undamp_;        /**< if true do undamping correction                 */
+	bool erronredshift_; /**< if true error is on redshit, if false error is on Z-axis                 */
 	double zc_;          /**< redshift of power spectrum                      */
 	
 // Filter by the pixel window function (parallelepiped/Top Hat cube)

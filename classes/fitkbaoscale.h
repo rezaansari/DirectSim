@@ -36,6 +36,7 @@
 #include "fitsioserver.h"
 #include "fftwserver.h"
 #include "stsrand.h"
+#include "slininterp.h"
 
 // DirectSim
 #include "pkspectrum.h"
@@ -96,12 +97,14 @@ public:
 	/** Constructor
 	    @param pspectrum    observed power spectrum: columns(1,2,3) = (k,P(k),sigma_P(k))
 	    @param su           cosmology 
+	    @param ref_file     file with the ref spectrum without oscillation 
 	    @param zref         redshift of power spectrum
-	    @param sig8         sigma8
-	    @param n            spectral index                                    */
-	FitBAOScale(TArray<r_8> pspectrum, SimpleUniverse& su, double zref,
-	                                   double sig8=0.8, double n=1);
-	
+	    @param simu_mode    if false, read shot noise and sigma */
+  FitBAOScale(TArray<r_8> pspectrum, SimpleUniverse& su, double zref, string ref_file, bool simu_mode);
+
+	//modif Adeline : psmooth is read in a file
+  //	FitBAOScale(TArray<r_8> pspectrum, TArray<r_8> psmooth, SimpleUniverse& su, double zref, double sig8, double n);
+
 	/** Initialise observed power spectrum variables and other vector variable 
 	    sizes using pspectrum
 	    @param pspectrum    observed power spectrum                           */
@@ -114,10 +117,12 @@ public:
 	    @param h         Hubble parameter in units of 100 km/s/Mpc
 	    @param sig8      sigma8 (amplitude of fluctuations)
 	    @param n         spectra index
-	    @param R         scale of sigma8                                      */
+	    @param R         scale of sigma8                                   
 	void ComputeSmoothPS(double OmegaM, double OmegaL, double OmegaB, double h, 
 	                                 double sig8=0.8, double n=1, double R = 8);
-	
+	not used anymore because sim spectrum read
+	------------------------------------------
+	   */
 	/** Set grid of trial ka values 
 	    minka    start ka value
 	    maxka    end ka value
@@ -195,6 +200,7 @@ protected:
 	double errup_;           /**< upper error range                           */
 	double errdown_;         /**< lower error range                           */
 	int nsig_;               /**< n-sigma of error ranges                     */
+	bool simu_mode_;         /**< if false, read shot noise and sigma         */
 };
 
 #endif

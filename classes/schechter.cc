@@ -27,6 +27,7 @@ namespace SOPHYA {
 LFParameters::LFParameters(string LFfile, int prtvl)
 : type_("file")
 {
+  cout <<" test"<<endl;
     File(LFfile, prtvl);
 };
 

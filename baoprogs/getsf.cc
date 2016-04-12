@@ -80,9 +80,10 @@ void usage(void) {
     cout << endl;
 	
 	cout << " -F : FullCat    FITS filename containing simulated catalog(s)  "<<endl;
-	cout << " -O : ObsCat     FITS file containing observed catalog          "<<endl;
+	cout << " -O : ObsCat     FITS file containing observed catalog(s)       "<<endl;
 	cout << " -o : sfunc      root name of selection function file           "<<endl;
 	cout << " -z : zp,zs,zz   column names to read redshifts from (see above)"<<endl;
+	cout << " -R : [noarg]    z-axis is Radial (LOS comoving distance)       "<<endl;
 	cout << " -d : [noarg]    Save n(z) Histos to a ppf file                 "<<endl;
 	//cout << " -N : nFiles: Number of FITS files containing RDLSS output [default=1]"<<endl;
 	cout << endl;
@@ -98,6 +99,7 @@ int main(int narg, char *arg[])	{
 	//int nFiles = 1;
 	bool DoDebug = false;
 	bool isZColSpecified = false;
+	bool isZRadial=false;     // z dimension IS 'radial' direction
 	string ZCol;
 	string ZOCol = "zp"; // read in photo-z's as OBSERVED redshifts from OBSERVED catalog
 	string ZSCol = "z";  // read in SPECTRO-z from OBSERVED catalog
@@ -106,7 +108,7 @@ int main(int narg, char *arg[])	{
 	//--- decoding command line arguments 
 	cout << " ==== decoding command line arguments ===="<<endl;
 	char c;
-	while((c = getopt(narg,arg,"hdF:O:o:z:")) != -1) { 
+	while((c = getopt(narg,arg,"hdRF:O:o:z:")) != -1) { 
 	    switch (c) {
 		    case 'F' :
 			    FullCat = optarg;
@@ -124,7 +126,10 @@ int main(int narg, char *arg[])	{
 			    ZCol = optarg;
 			    isZColSpecified = true;
 			    break;
-		    case 'd' :
+                    case 'R' :
+		            isZRadial=true;
+		            break;
+	            case 'd' :
 			    DoDebug=true;
 			    break;
 		    case 'h' :
@@ -150,13 +155,16 @@ int main(int narg, char *arg[])	{
 		}
 	
 	cout << "     Printing command line arguments ... "<<endl<<endl;
-	cout << "     Observed catalog in file "<< ObsCat <<endl;
+	cout << "     Observed catalog in file(s) "<< ObsCat <<endl;
 	cout << "     OBSERVED redshifts to be read from "<< ZOCol <<" column"<<endl;
 	cout << "     SPECTRO redshifts to be read from "<< ZSCol <<" column"<<endl;
 	cout << "     True redshifts in file(s) " << FullCat << endl;
 	cout << "     SPECTRO redshifts to be read from "<< ZFCol <<endl;
 	cout << "     Selection function will be written to "<< SFFileName <<"_nofz.txt and ";
-	cout << SFFileName <<"_specz_nofz.txt"<<endl;	
+	cout << SFFileName <<"_specz_nofz.txt"<<endl;
+	if (isZRadial) 
+	  cout << "     z-axis is radial direction: read x, y instead of phi, theta"<<endl;
+
 	if (DoDebug)
 		cout << "     Saving n(z)'s to ppf file "<< SFFileName <<"_histo.ppf"<< endl;
 	cout <<endl;
@@ -165,38 +173,68 @@ int main(int narg, char *arg[])	{
   
 		// Read in redshifts from observed catalog
 		cout <<"0/ Read in observed catalog "<< ObsCat <<endl;
-		FitsInOutFile fin(ObsCat, FitsInOutFile::Fits_RO);
+
+		// Possibility to have a list of observed catalogs (Cecile)
+		string delim=",";
+		vector<string> fobsnames;
+		stringSplit(ObsCat,delim,fobsnames);
+  
+		//use the first to define the dt class
+		FitsInOutFile fin(fobsnames[0], FitsInOutFile::Fits_RO);
 		fin.MoveAbsToHDU(2);
 		SwFitsDataTable dt(fin,512,false);
-		sa_size_t Izs = dt.IndexNom(ZSCol);
-		sa_size_t Izp = dt.IndexNom(ZOCol);
-		double minzo,maxzo,minzop,maxzop;
-		dt.GetMinMax(Izs, minzo, maxzo); 
-		dt.GetMinMax(Izp, minzop, maxzop); 
-		cout <<"    Min SPECTRO z of OBS catalog = "<< minzo;
-		cout <<", max SPECTRO z of OBS catalog = "<< maxzo <<endl;
-		cout <<"    Min OBSERVED z of OBS catalog = "<< minzop;
-		cout <<", max OBSERVED z of OBS catalog = "<< maxzop <<endl;
-		cout << endl;
-	
 	
 		// Set cosmology
-		cout << "0.1/ Initialise cosmology:"<<endl;
-		double h = 0.71, OmegaM = 0.267804, OmegaL = 0.73;
-		SimpleUniverse su(h, OmegaM, OmegaL);
-		su.SetFlatUniverse_OmegaMatter();
-		double OmegaB = su.OmegaBaryon();
-		cout <<"    OmegaK = "<< su.OmegaCurv() <<", OmegaM="<< su.OmegaMatter();
-		cout <<", OmegaL = "<< OmegaL <<", OmegaB = "<< OmegaB;
-		cout <<", H0 = "<< su.H0() <<endl;
+		cout << "     Initialise cosmology: (same as SimLSS)"<<endl;
 		
+		//////////  modif Adeline : read cosmo in Fits_RO header
+		string H0_s, OmegaM_s, OmegaL_s, OmegaB_s, OmegaR_s, wDE_s, wDA_s, Sigma8_s, Ns_s;
+		double h, OmegaM, OmegaL, OmegaB, OmegaR, wDE, wDA, Sigma8, n_s;
+		H0_s = fin.KeyValue("H0");
+		OmegaM_s = fin.KeyValue("OMEGAM0");
+		OmegaL_s = fin.KeyValue("OMEGADE0");
+		OmegaB_s = fin.KeyValue("OMEGAB0");
+		OmegaR_s = fin.KeyValue("OMEGAR0");
+		wDE_s = fin.KeyValue("DE_W0");
+		wDA_s = fin.KeyValue("DE_WA");
+		Sigma8_s = fin.KeyValue("SIGMA8");
+		Ns_s = fin.KeyValue("N_S");
+	
+		h = atof(H0_s.c_str()) / 100.;
+		OmegaM = atof(OmegaM_s.c_str());
+		OmegaL = atof(OmegaL_s.c_str());
+		OmegaB = atof(OmegaB_s.c_str());
+		OmegaR = atof(OmegaR_s.c_str());
+		wDE = atof(wDE_s.c_str());
+		wDA = atof(wDA_s.c_str());
+		Sigma8 = atof(Sigma8_s.c_str());
+		n_s = atof(Ns_s.c_str());
+
+		SimpleUniverse su(h, OmegaM, OmegaL);
+		su.SetOmegaBaryon(OmegaB);
+		su.SetOmegaRadiation(OmegaR);
+		su.SetSigma8(Sigma8);
+		su.SetSpectralIndex(n_s);
+		su.SetFlatUniverse_OmegaLambda(); // Cecile modif - no be sure that it is flat by adjusting OmegaLambda
+		
+		cout << "     OmegaK="<< su.OmegaCurv() <<", OmegaM="<< su.OmegaMatter();
+		cout << ", OmegaL="<< su.OmegaLambda() <<", OmegaB="<< su.OmegaBaryon();
+		cout << ", Omega_rad=" << su.OmegaRadiation() << ", Omega_cdm=" << su.OmegaCDM() <<", H0="<< su.H0() << endl;
+		cout << "check flatness: OmegaTot=" << su.OmegaTotal() << endl;
+		if (wDE != -1 or wDA !=0)  
+		  su.SetDarkEnergy(su.OmegaLambda(),wDE,wDA);
+		
+		cout << " and w0=" << su.wDE() << ", wA=" << su.waDE() << ", sigma8=" << su.Sigma8() << endl;
+		cout << "Spectral index=" << su.Ns() << endl;
+		cout << endl;
+			
 		
 		// Calculate selection function
 		RandomGenerator rg;
 		string tmp="tmptmp";
 		FitsInOutFile fos(tmp,FitsInOutFile::Fits_Create);
-		Cat2Grid cat(dt, su, rg, fos, ZOCol, ZSCol);
-		
+		Cat2Grid cat(dt, su, rg, fos, ZOCol, ZSCol, isZRadial, 0., true, ObsCat);
+
 		string OutRoot = "tmp";
 		if (DoDebug)
 			cat.SetDebugOutroot(OutRoot);
@@ -209,12 +247,12 @@ int main(int narg, char *arg[])	{
 		inp.close();
 		if(inp.fail()) {
 			inp.clear(ios::failbit);
-			cat.SaveSelecFunc(SFFileName, FullCat, ZFCol);
+			cat.SaveSelecFunc(SFFileName, FullCat, ObsCat, ZFCol, ZSCol, ZOCol);
 			// both SPECTRO-z and OBSERVED-z sf's are computed here
 			}
 
 		if( remove(tmp.c_str()) != 0 )
-            cout << "Error deleting temporary file" << endl;
+		  cout << "Error deleting temporary file" << endl;
   
   
 			
