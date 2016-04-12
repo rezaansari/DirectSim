@@ -65,7 +65,9 @@ Perform the usual ```./configure```, ```make```, ```make install```. Type ```./c
 - Get repo
     - `git clone git@github.com:alexabate/DirectSim.git`. You will need to generate ssh key according to these instructions: https://help.github.com/articles/generating-ssh-keys and create the ~/.ssh directory if it doesn't exist. Or
     - `git clone https://github.com/alexabate/DirectSim.git`
-- `cd DirectSim` 
-- type `make`
+	- `cd DirectSim`
+- Define the env variable  FZGALSIM to define the installation path
+   - setenv 	FZGALSIM `pwd`
+- type `make depend ; make`
 
 
