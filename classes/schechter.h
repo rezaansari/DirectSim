@@ -77,7 +77,7 @@ public:
         @note should this be a proper interpolation rather than be defined on a
         grid ? 
         @note also, parameters read from a file are NOT returned this way     */
-	 virtual void operator()(double z, double& ps, double& ms, double& a) {  	
+	 virtual void operator()(double z, double& ps, double& ms, double& a) const {  	
 	 
 	        double minv=1000; int idmin=-1; double diff;
 		    int nz = zgrid_.size();
@@ -318,7 +318,7 @@ protected:
   *
   * Returns \f$\phi(M|z)dV(z)\f$
   */
-class SchechterVol : public ClassFunc1D, ClassFunc2D
+class SchechterVol : public ClassFunc2D // ClassFunc1D, ClassFunc2D
 {
 public:
 	/** Constructor
@@ -328,10 +328,6 @@ public:
 	  : lfpars_(lfpars) , cosmoc_(su,0.,10.,1000) {   
 			Mmin_=-24, Mmax_=-13;// units of "M-5log10h70"
   			npt_=10000;  };
-
-    /** This is defined to override the pure virtual function defined in ClassFunc1D
-        otherwise SchechterVol is sometimes treated as an abstract class        */
-    virtual double operator() (double) const { };
     
     /** Return Schechter function multiplied by volume element at redshift z
         @param absmag    absolute magnitude Schechter func returned at
@@ -374,7 +370,7 @@ protected:
   *
   * Returns \f$ \phi(M|z) \f$
   */
-class SchechterM : public ClassFunc1D, ClassFunc2D
+class SchechterM : public ClassFunc2D // ClassFunc1D, ClassFunc2D
 {
 public:
 	/** Constructor
@@ -384,10 +380,6 @@ public:
 			Mmin_=-24, Mmax_=-13;// units of "M-5log10h70"
   			npt_=10000;  };
   			
-    /** This is defined to override the pure virtual function defined in ClassFunc1D
-        otherwise SchechterM is sometimes treated as an abstract class        */
-    virtual double operator() (double) const { };
-
     /** Return \f$ \phi(M|z) \f$ 
         @param absmag    absolute magnitude
         @param z         redshift                                             */
@@ -707,33 +699,30 @@ protected:
   * Galaxy type fractions as a function of redshift 
   *
   */
-class TypeRatio : public ClassFunc1D
+class TypeRatio // :public ClassFunc1D
 {
 public:
     
     /** Constructor 
         @param tr0    galaxy type fractions at redshift zero                  */
     TypeRatio(TypeRatio0& tr0) : tr0_(tr0) { };
-    
-    /** This is defined to override the pure virtual function defined in ClassFunc1D
-        otherwise TypeRatio is sometimes treated as an abstract class        */
-    virtual double operator() (double) const { };
-		
+    		
     /** Return galaxy type fractions at absolute magnitude m, redshift z
         @param m    absolute magnitude
         @param z    redshift
         @param Fe   fraction of early/elliptical types
         @param Fs   fraction of starburst types
         @param Fl   fraction of late/spiral types */
-	virtual void operator()(double m, double z, double& Fe, double& Fs, double& Fl) 
-	const {
-             tr0_.ChangeTypeTo(1);
-             Fe = tr0_(m)*pow((1+z),-0.7);
-			 tr0_.ChangeTypeTo(3);
-             Fs = tr0_(m)*pow((1+z),0.7);
-             tr0_.ChangeTypeTo(2);
-             Fl = 1-(Fe+Fs); };
-							
+  virtual void operator()(double m, double z, double& Fe, double& Fs, double& Fl) const
+  {
+    tr0_.ChangeTypeTo(1);
+    Fe = tr0_(m)*pow((1+z),-0.7);
+    tr0_.ChangeTypeTo(3);
+    Fs = tr0_(m)*pow((1+z),0.7);
+    tr0_.ChangeTypeTo(2);
+    Fl = 1-(Fe+Fs);
+  };
+  
 protected:
     TypeRatio0& tr0_;    /**< galaxy type fractions at redshift zero          */
 };

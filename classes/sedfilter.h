@@ -54,7 +54,7 @@ class SED : public ClassFunc1D
 {
 public:
     /** Default constructor */
-    SED() : sed2_(sed2init_)
+  SED() : sed2_(NULL), sed2init_(NULL)    //  CHECK Pointers initialized to zero - Is this correct ?  Reza  April 2016 
     { isRead_=false; isRedden_=false; isInterp_=false; _test_=1.; };
   
     /** Constructor
@@ -600,17 +600,18 @@ protected:
 
 //--- Does int F(lambda)/lambda dlambda or SED(lambda)*F(lambda) or whatever
 // Simple summing integration
-class FilterIntegrator : public ClassFunc1D
+class FilterIntegrator // : public ClassFunc1D
 {
 public:
   FilterIntegrator(ClassFunc1D& f, double xmin, double xmax, int Nstep=500) 
     : f_(f) , xmin_(xmin) , xmax_(xmax) , Nstep_(Nstep) { }
     
    /** This is defined to override the pure virtual function defined in ClassFunc1D
-        otherwise FilterIntegrator is sometimes treated as an abstract class        */
+        otherwise FilterIntegrator is sometimes treated as an abstract class        
     virtual double operator() (double) const { };
-    
-   double Value() {
+   */
+  
+   double Value() const {
         if (xmin_>=xmax_){
             string emsg="FilterIntegrator::Value() integral limits don't make sense ";
             throw out_of_range(emsg);
@@ -631,7 +632,7 @@ public:
 protected:
   ClassFunc1D& f_; 
   double xmin_, xmax_;
-  int Nstep_;
+  mutable int Nstep_;
 };
 
 

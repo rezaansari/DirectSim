@@ -12,6 +12,7 @@
   *
   */
 
+#include <unistd.h>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -85,6 +86,7 @@ int main(int narg, char* arg[]) {
 	sa_size_t x1=0, x2=0;	// Range of sub array in x-dim
 	sa_size_t y1=0, y2=0;	// Range of sub array in y-dim
 	sa_size_t z1=0, z2=0;	// Range of sub array in z-dim
+	long l1,l2;
 	bool isSimLSS=false;
 	// DEBUG
 	bool DeBug=false;
@@ -103,13 +105,16 @@ int main(int narg, char* arg[]) {
 		        outfile	= optarg; // filename of subfromfulls
 		        break;
 	        case 'x' :
-		        sscanf(optarg,"%ld,%ld",&x1,&x2);
+		        sscanf(optarg,"%ld,%ld",&l1,&l2);
+			x1=l1;  x2=l2;
 		        break;
 	        case 'y' :
-		        sscanf(optarg,"%ld,%ld",&y1,&y2);
+		        sscanf(optarg,"%ld,%ld",&l1,&l2);
+			y1=l1;  y2=l2;
 		        break;
 	        case 'z' :
-		        sscanf(optarg,"%ld,%ld",&z1,&z2);
+		        sscanf(optarg,"%ld,%ld",&l1,&l2);
+			z1=l1;  z2=l2;
 		        break;
 	        case 's' :
 		        isSimLSS=true;

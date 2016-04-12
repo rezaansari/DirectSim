@@ -93,7 +93,7 @@ int main(int narg, char* arg[])
     cout <<"     Number of original SEDs = "<<nsed<<endl;
 	cout << endl;
 
-	string sedNames[nsed];
+	std::vector<string> sedNames(nsed);
 	ifstream names;
 	names.open("UVKLIB.list"); 
 	for (int i=0; i<nsed; i++)

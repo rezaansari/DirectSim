@@ -1,3 +1,4 @@
+#include <unistd.h>
 // -*- LSST-C++ -*-
 #include "machdefs.h"
 #include "sopnamsp.h"
@@ -136,7 +137,7 @@ int main(int narg, char* arg[])
     // read in all the SED filenames
     int prt=1;
     ifs.open(inFile.c_str(),ifstream::in);
-    string fileNames[nsed];
+    std::vector<string> fileNames(nsed);
     if (prt > 0)
         cout <<"     File contains the following SEDs:"<<endl;
     for (int i=0; i<nsed; i++)

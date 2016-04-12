@@ -223,7 +223,7 @@ Cat2Grid& Cat2Grid::Set(const Cat2Grid& a)
 	
 		
 	prtlev_ = a.prtlev_;
-	
+	return *this;
 };
 
 

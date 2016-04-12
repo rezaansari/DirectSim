@@ -13,7 +13,7 @@ namespace SOPHYA {
 
 // Constructor if reading flux values from a file for interpolation
 SED::SED(string& fname, double xmin, double xmax, int npt)
-: sed2_(sed2init_)
+  : sed2_(NULL), sed2init_(NULL)  //  CHECK Pointers initialized to zero - Is this correct ?  Reza  April 2016 
 {
   	string Tplace;
 	char * pt=getenv("SEDLOC");
@@ -60,7 +60,7 @@ SED& SED::Set(const SED& a)
     EBmV_=a.EBmV_;
     RvCard_=a.RvCard_;
     law_=a.law_;
-	
+    return *this;
 };
 
 
@@ -240,7 +240,7 @@ void ReadSedList::readSeds(double lmin,double lmax)
     
     // read in all the SED filenames
 	ifs.open(sedFileFullPath_.c_str(),ifstream::in);
-	string fileNames[nsed_];
+	vector<string> fileNames(nsed_);
 	string line;
 	if (prt_ > 0)
 	    cout <<"     File contains the following SEDs:"<<endl;
@@ -548,7 +548,7 @@ void ReadFilterList::readFilters(double lmin, double lmax)
     
     // read in all the filter filenames
 	ifs.open(filterFileFullPath_.c_str(),ifstream::in);
-	string fileNames[ntot_];
+	vector<string> fileNames(ntot_);
 	string line;
 	if (prt_ > 0)
 	    cout <<"     File contains the following filters:"<<endl;

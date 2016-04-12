@@ -39,15 +39,16 @@
   * Calculates dimensionless basis functions involving Hermite polynomials
   * 
   */
-class BasisFuncs : public ClassFunc1D, public Hermite
+class BasisFuncs : public Hermite // public ClassFunc1D
 {
 public:
     /** Constructor */
     BasisFuncs(){ };
     
     /** This is defined to override the pure virtual function defined in ClassFunc1D
-        otherwise BasisFuncs is sometimes treated as an abstract class        */
+        otherwise BasisFuncs is sometimes treated as an abstract class        
     virtual double operator() (double) const { };
+    */
     
     /** Return the basis function \f$\phi_n(x)\f$
         @param n    order of Hermite polynomial

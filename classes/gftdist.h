@@ -114,7 +114,7 @@ public:
 	/** Return value of cumultive redshift distribution function at redshift z
 	    \f$ F_z(z)=\frac{\int_0^z\int_M_1^M_2 \phi(M,z')dV(z')dM}
 	                {\int_0^z_{max}\int_M_1^M_2  \phi(M,z')dV(z')dM}          */
-	virtual double operator() (double z) { return schZint_(z); };
+	virtual double operator() (double z) const { return schZint_(z); };
 
     /** Set up for reading distribution from a FITS bintable file 
         @param fname    FITS file to read from
@@ -342,7 +342,7 @@ public:
 	    @param nptm     number of absolute mag values in 2D array*/
 	DrawM(CumulDistM& cumm, RandomGeneratorInterface& rg, double mmin=-24,
 		double mmax=-13, double zmin=0., double zmax=6., int nptz=600, int nptm=600)
-	: cumm_(cumm_), rg_(rg_), mmin_(mmin), mmax_(mmax), zmin_(zmin), zmax_(zmax)
+	: cumm_(cumm), rg_(rg), mmin_(mmin), mmax_(mmax), zmin_(zmin), zmax_(zmax)
     { SetUp(rg_, mmin_, mmax_, zmin_, zmax_, nptz, nptm); };
 				
 	/** Constructor when reading 2D array of cumulative magnitude distribution 
@@ -425,6 +425,7 @@ public:
 			return 3;
 		else if (rn>=(Fe+Fs))
 			return 2;
+		else return 0;  // CHECK , is this correct - returning 1  - Reza, April 2016 
 		 };
 	
 protected:

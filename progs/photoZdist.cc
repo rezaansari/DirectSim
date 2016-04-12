@@ -1,3 +1,4 @@
+#include <unistd.h>
 // -*- LSST-C++ -*-
 #include <stdio.h>
 #include <stdlib.h>

@@ -14,6 +14,8 @@
   *
   */
 
+#include <unistd.h>
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -368,7 +370,7 @@ int main(int narg, char* arg[]) {
 		}
 	string LFfile = LFplace +	"GOODS_B_LF.txt";// add an option for this
 
-	/*  
+	***  
 	ifstream ifs;
 	ifs.open(LFfile.c_str(), ifstream::in);
 	if (ifs.fail())

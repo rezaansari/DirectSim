@@ -196,6 +196,7 @@ int main(int narg, char* arg[]) {
 		        DoDebug = true;
 		        break;
 	        case 'c' :
+        		subinfo = optarg;   // $CHECK$ Adeline+reza, define the name of the file containing sub-grid size/offset
 		        isSameSub=true;
 		        break;
 	        case 'h' :
@@ -216,6 +217,7 @@ int main(int narg, char* arg[]) {
 	string textfile=".txt";
 	string fitsfile="fits";
 
+	//   REZA/Alex: check the following conditions
 	if ( strcmp(textfile.c_str(),endf.c_str())!=0 ) // if strings are not the same
 		computeOvDensityPS = false; // will be reading it from a file
 	else if ( strcmp(fitsfile.c_str(),endf.c_str())!=0 )
@@ -223,6 +225,7 @@ int main(int narg, char* arg[]) {
 	else 
 		throw ParmError("SimLSS file is of unknown file type: not fits or .txt");
 
+	//--- Adeline*DBG* force   computeOvDensityPS = true;
 
 	// Command line argument printing
 	cout << "     Printing command line arguments ... "<<endl;
@@ -266,8 +269,8 @@ int main(int narg, char* arg[]) {
 	cout <<"     Read in file "<< infile <<endl;
 	FitsInOutFile fin(infile, FitsInOutFile::Fits_RO);   
 	TArray<r_8> ngals,wngals,wrgals;
-	fin >> ngals;
-	fin >> wrgals;
+	fin >> ngals;     // grid with values of galaxy numbers 
+	fin >> wrgals;    // random grid 
 	fin >> wngals; // in the case where there is no selection effects on the
 	               // galaxy catalog: ngals=wngals
 
@@ -276,7 +279,8 @@ int main(int narg, char* arg[]) {
 	sa_size_t nx = wngals.SizeX(); 
 	sa_size_t ny = wngals.SizeY(); 
 	sa_size_t nz = wngals.SizeZ(); 
-	double z_center = atof(fin.KeyValue("ZCEN").c_str()); 
+	double z_center = atof(fin.KeyValue("ZCEN").c_str());
+	//$CHECK$ Reza : should have a grid resolution in X,Y,Z 
 	double grid_res = atof(fin.KeyValue("R").c_str()); 
 	if(!isMeanDensitySpec)
 		meandens=atof(fin.KeyValue("MeanOverDensity").c_str());
@@ -324,7 +328,7 @@ int main(int narg, char* arg[]) {
 	cout << "     original catalog had no selection effects)"<<endl;
 	cout << endl;
 	
-	
+	//$CHECK$ Reza : what if different grid resolution along X,Y,Z 	
 	r_4 volcat = wngals.SizeX()*wngals.SizeY()*wngals.SizeZ()*pow(grid_res,3); 
 	cout <<"    Grid volume = "<< volcat <<endl<<endl;
 	
@@ -358,7 +362,9 @@ int main(int narg, char* arg[]) {
 	    double zc = m2g.ReturnZref();
 	    cout << endl;
 	    TArray<r_8> dens, densf;
-	
+
+	    //$CHECK$   Reza , cette section de code a beson d'etre verifie ----------
+	//$CHECK$ Reza/Adeline : check the value of isSameSub	
 	    if(isSameSub) {
 		
 		    cout <<"     Select same sub-array as galaxy catalog, ";
@@ -433,6 +439,8 @@ int main(int narg, char* arg[]) {
 		    cout << meandens <<endl;
 		    }
 	    cout <<endl;
+
+	    //$CHECK$   Reza  ---- FIN section a verifier ----------
 
 
 	    res.Update();

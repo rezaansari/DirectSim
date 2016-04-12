@@ -118,7 +118,8 @@ Mass2Gal& Mass2Gal::Set(const Mass2Gal& a)
 //	phi_ = a.phi_; 
 //	MB_ = a.MB_;	
 //	typeint_ = a.typeint_;		 
-//	extincBmV_ = a.extincBmV_;	
+//	extincBmV_ = a.extincBmV_;
+	return *this;
 }
 
 //******* Methods  ***********************************************************//

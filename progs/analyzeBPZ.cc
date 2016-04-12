@@ -10,6 +10,8 @@
  * @date 2012
  *
  */
+#include <unistd.h>
+
 #include "machdefs.h"
 #include "sopnamsp.h"
 #include <iostream>

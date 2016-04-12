@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include "machdefs.h"
 #include "sopnamsp.h"
 #include <iostream>
@@ -157,7 +158,7 @@ int main(int narg, char* arg[])
 		outfileroot	= optarg;
 		break;
 	  case 'd' :
-		sscanf(optarg,"%ld",&meandens);
+		sscanf(optarg,"%d",&meandens);
 		break;
 	  case 'e' :
 		pzconv = optarg;

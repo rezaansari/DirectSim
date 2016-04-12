@@ -27,7 +27,7 @@ SInterp1D::SInterp1D(double xmin, double xmax, vector<double>& yreg)
 
 
 // constructor without regularly spaced x
-SInterp1D::SInterp1D(vector<double>& xs, vector<double>& ys, double xmin, double xmax, size_t npt)
+SInterp1D::SInterp1D(vector<double> const& xs, vector<double> const& ys, double xmin, double xmax, size_t npt)
   : xmin_(0.), xmax_(1.), dx_(1.), ksmx_(1), npoints_(0)
 {
     setzero_=false;
@@ -36,7 +36,7 @@ SInterp1D::SInterp1D(vector<double>& xs, vector<double>& ys, double xmin, double
 
 
 // constructor without regularly spaced x and TVector
-SInterp1D::SInterp1D(TVector<r_8>& xs, TVector<r_8>& ys,  double xmin, double xmax, size_t npt)
+SInterp1D::SInterp1D(TVector<r_8> const& xs, TVector<r_8> const& ys,  double xmin, double xmax, size_t npt)
   : xmin_(0.), xmax_(1.), dx_(1.), ksmx_(1), npoints_(0)
 {
     vector<double> xs_std, ys_std;
@@ -132,7 +132,7 @@ void SInterp1D::DefinePoints(double xmin, double xmax, vector<double>& yreg)
 
 
 // Define interpolation table with x,y pairs
-void SInterp1D::DefinePoints(vector<double>& xs, vector<double>& ys, 
+void SInterp1D::DefinePoints(vector<double> const& xs, vector<double> const& ys, 
                                            double xmin, double xmax, size_t npt)
 {
 
@@ -325,6 +325,7 @@ ostream& SInterp1D::Print(ostream& os, int lev)  const
             }
         } 
     os << " ----------------------------------------------------------" << endl;
+    return os;
 };
 
 
@@ -367,7 +368,7 @@ void SInterp2D::rangeChecks(vector<double>& xa, vector<double>& xb, TArray<doubl
 
 
 // 1 == a, 2 == b
-double SInterp2D::biLinear(double x1, double x2) 
+double SInterp2D::biLinear(double x1, double x2)   const 
 {
     // x1 corresponds to rows direction of y (y-axis direction)
     // x2 corresponds to columns direction of y (x-axis direction)
@@ -394,7 +395,7 @@ double SInterp2D::biLinear(double x1, double x2)
 };
 
 
-double SInterp2D::biLinearAccurate(double x1, double x2) 
+double SInterp2D::biLinearAccurate(double x1, double x2) const
 // Given arrays xa_[1..na_] and xb_[1..nb_] of independent variables, and a submatrix of function
 // values y_[1..na_][1..nb_], tabulated at the grid points defined by xa and xb; and given values
 // x1 and x2 of the independent variables; this routine returns an interpolated function value y,

@@ -278,8 +278,8 @@ double PowerSpec::AccumulatePowerSpectra(HProf& hp, bool pixcor, double maxk,
 				double f = fx*fy*fz;
 				
 				if(Err_>0&&undamp_) { // if want to undamp	
-				
-					double g = exp(-(kz*Err_)*(kz*Err_));
+				  //$CHECK$   the correction term is  exp(-k^2 sigma_z^2 / 2)   
+					double g = exp(-(kz*Err_)*(kz*Err_)/2.);
 					//if ((ix!=0)&&(iy!=0)&&(iz!=0)&&(kz<=maxk_))
 					if (kz<=maxk_)
 						{hp.Add(kmod, pk/(f*g)); sum+=pk; nkeep++;}

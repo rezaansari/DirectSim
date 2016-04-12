@@ -204,7 +204,7 @@ public:
                             DopplerParDistribution& dopplerParDist
         );
     
-    /** Simulate a line of sight distribution of absorbers, returns number of 
+    ** Simulate a line of sight distribution of absorbers, returns number of 
         absorbers
         @param zStart           Starting redshift of line of sight distribution
         @param zMax             Max redshift along line of sight
@@ -217,7 +217,7 @@ public:
             
     void simulateAbsorber(double zCurrent, double& redshift, double& dopplerPar,
                                                     double& columnDensity);
-    /** Draw deltaZ of next absorber (next absorber is at zLast+deltaZ).  This 
+    ** Draw deltaZ of next absorber (next absorber is at zLast+deltaZ).  This 
         uses the "Inverse Transformation method"
         @param zLast Redshift of last absorber                                  
 =======*/

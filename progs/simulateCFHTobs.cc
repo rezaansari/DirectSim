@@ -1,3 +1,4 @@
+#include <unistd.h>
 // -*- LSST-C++ -*-
 #include "machdefs.h"
 #include "sopnamsp.h"

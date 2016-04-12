@@ -60,7 +60,7 @@ public :
         @param xmin  min x value to do interpolation from
         @param xmax  max x value to do interpolation from
         @param npt   number of points to use in interpolation                 */
-    SInterp1D(vector<double>& xs, vector<double>& ys, 
+    SInterp1D(vector<double> const& xs, vector<double> const& ys, 
                                  double xmin=1., double xmax=-1., size_t npt=0); 
                         
     // comment this constructor out if compiling withouht SOPHYA         
@@ -73,7 +73,7 @@ public :
         @param xmin  min x value to do interpolation from
         @param xmax  max x value to do interpolation from
         @param npt   number of points to use in interpolation                 */ 
-    SInterp1D(TVector<r_8>& xs, TVector<r_8>& ys, 
+    SInterp1D(TVector<r_8> const& xs, TVector<r_8> const& ys, 
                                  double xmin=1., double xmax=-1., size_t npt=0); 
 
     /** Destructor */
@@ -118,7 +118,7 @@ public :
         @param xmax  max x value of interpolation table
         @param npt   number of points to use in interpolation (or npt<1 for no
                      table)                                                   */
-    void DefinePoints(vector<double>& xs, vector<double>& ys, 
+    void DefinePoints(vector<double> const& xs, vector<double> const& ys, 
                                  double xmin=1., double xmax=-1., size_t npt=0); 
 
     /** Read Y's (one per line) (for regularly spaced X's) from a file and call 
@@ -193,7 +193,7 @@ public :
             
     /** This is defined to override the pure virtual function defined in ClassFunc1D
         otherwise SInterp2D is sometimes treated as an abstract class        */
-    virtual double operator() (double, double) const { };
+  //    virtual double operator() (double, double) const { };
         
     void definePoints(vector<double> xa, vector<double> xb, TArray<double> y, bool isAccurate=true)
         {
@@ -218,14 +218,14 @@ public :
     /** Interpolated Y value as a function of x1, x2. Simple bilinear interpolation, faster.                 
         @param x1   corresponds to rows direction of y (y-axis direction)
         @param x2   corresponds to columns direction of y (x-axis direction)  */
-    double biLinear(double x1, double x2);
+    double biLinear(double x1, double x2) const;
     
     /** Interpolated Y value as a function of x1, x2. More accurate bilinear interpolation                       
         @param x1   corresponds to rows direction of y (y-axis direction)
         @param x2   corresponds to columns direction of y (x-axis direction)  */
-    double biLinearAccurate(double x1, double x2);
+    double biLinearAccurate(double x1, double x2) const;
 
-    virtual inline double operator()(double x1, double x2) {  
+    virtual inline double operator()(double x1, double x2) const {  
         if (isAccurate_)
             return biLinearAccurate(x1,x2); 
         else
@@ -242,7 +242,7 @@ public :
             };
             
     /** Find closest xb element to x2, where xb<x2                            */
-    int findxbElement(double x2) { 
+    int findxbElement(double x2) const { 
             int ib = (int)floor((x2-xb_[0])/dxb_); 
             if (ib < 0)
                 { cout << "WARNING! x2 outside of grid!" <<endl; ib = 0;}
@@ -251,7 +251,7 @@ public :
             return ib;
             };
             
-     vector<double> getColumn(int colID) {
+     vector<double> getColumn(int colID) const {
             vector<double> yColumn;
             for (int i=0; i<na_; i++)
                 yColumn.push_back(y_(i,colID));
